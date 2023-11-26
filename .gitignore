@@ -53,10 +53,6 @@ Mkfile.old
 dkms.conf
 
 .vscode
-data
-!data/
-bin
-!bin/
 backup
 b+Tree
 *.txt
