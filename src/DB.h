@@ -256,7 +256,7 @@ private:
         {
             // insert xxx values (xxx)
             std::string insert_table_xxx = "insert\\s[a-zA-Z]+[a-zA-Z0-9]*\\svalues";
-            std::string tuple_content = "(\\d+|\".*\")";
+            std::string tuple_content = "(-?\\d+|\".*\")";
             std::string insert_table_regex = "^\\s?" + insert_table_xxx + "\\s?\\(\\s?(" +
                                              tuple_content + "\\s?,\\s?)*" + tuple_content + "\\s?,?" + "\\s?\\)\\s?" + "$";
             if (std::regex_match(cmd, std::regex(insert_table_regex))) {
@@ -275,7 +275,7 @@ private:
                         i.erase(0, 1);
                     row_struct d;
                     std::smatch res;
-                    if (std::regex_match(i, res, std::regex("\\d+"))) {
+                    if (std::regex_match(i, res, std::regex("-?\\d+"))) {
                         d.type = INT;
 
                         // string -> int
@@ -344,7 +344,7 @@ private:
         {
             // select xxx from xxx
             std::string property_name = "([a-zA-Z]+[a-zA-Z0-9]*\\s?,\\s?)*[a-zA-Z]+[a-zA-Z0-9]*";
-            std::string simple_condition = "([a-zA-Z]+[a-zA-Z0-9]*\\s?=\\s?((\\d+)|(\".*\")))";
+            std::string simple_condition = "([a-zA-Z]+[a-zA-Z0-9]*\\s?=\\s?((-?\\d+)|(\".*\")))";
             std::string paren_condition = std::format("(\\(\\s?{}\\s?\\))", simple_condition);
             std::string single_condition = std::format("({0}|{1})", simple_condition, paren_condition);
             std::string mutiply_condition = std::format("({0}|({0}\\s?,\\s?)*{0}|\\(\\s?({0}\\s?,\\s?)*{0}\\s?\\))", single_condition);
@@ -446,7 +446,7 @@ private:
         {
             // delete xxx
             std::string delete_table = "delete\\s[a-zA-Z]+[a-zA-Z0-9]*";
-            std::string simple_condition = "([a-zA-Z]+[a-zA-Z0-9]*\\s?=\\s?((\\d+)|(\".*\")))";
+            std::string simple_condition = "([a-zA-Z]+[a-zA-Z0-9]*\\s?=\\s?((-?\\d+)|(\".*\")))";
             std::string paren_condition = std::format("(\\(\\s?{}\\s?\\))", simple_condition);
             std::string single_condition = std::format("({0}|{1})", simple_condition, paren_condition);
             std::string mutiply_condition = std::format("({0}|({0}\\s?,\\s?)*{0}|\\(\\s?({0}\\s?,\\s?)*{0}\\s?\\))", single_condition);
@@ -459,6 +459,7 @@ private:
                         std::vector<std::string> conditions;
                         sp.str_split(cmd, conditions, std::regex("\\swhere\\s"));
                         std::multimap<std::string, std::string> cdt;
+                        std::vector<std::pair<std::string, std::string>> cdts;
                         if (cmd.find("where") + 1) {
                             std::vector<std::string> w_tmp;
                             std::replace(conditions[1].begin(), conditions[1].end(), '(', ' ');
@@ -474,8 +475,21 @@ private:
                                     c_tmp[1].pop_back();
                                 }
                                 cdt.insert(std::multimap<std::string, std::string>::value_type(c_tmp[0], c_tmp[1]));
+                                cdts.emplace_back(c_tmp[0], c_tmp[1]);
                             }
                         }
+
+                        if(getKeyType(name, res[1]) == 0){ // int
+                            table<int> t(name, res[1]);
+                            t.openTable();
+                            t.eraseAll(cdts);
+                        }
+                        else{ // string
+                            table<std::string> t(name, res[1]);
+                            t.openTable();
+                            t.eraseAll(cdts);
+                        }
+
                         std::multimap<int, std::string> _map;
                         if (delete_record(name.c_str(), res[1].c_str(), cdt)) {
                             std::cout << "Delete record successfully!" << std::endl;
@@ -498,7 +512,7 @@ private:
         {
             // update xxx set xxx
             std::string update_xxx = "update\\s[a-zA-Z]+[a-zA-Z0-9]*\\sset\\s";
-            std::string simple_condition = "([a-zA-Z]+[a-zA-Z0-9]*\\s?=\\s?((\\d+)|(\".*\")))";
+            std::string simple_condition = "([a-zA-Z]+[a-zA-Z0-9]*\\s?=\\s?((-?\\d+)|(\".*\")))";
             std::string paren_condition = std::format("(\\(\\s?{}\\s?\\))", simple_condition);
             std::string single_condition = std::format("({0}|{1})", simple_condition, paren_condition);
             std::string mutiply_condition = std::format("({0}|({0}\\s?,\\s?)*{0}|\\(\\s?({0}\\s?,\\s?)*{0}\\s?\\))", single_condition);
@@ -522,6 +536,7 @@ private:
                     std::pair<std::string, std::string> val{values[0], values[1]};
                     // where
                     std::multimap<std::string, std::string> cdt;
+                    std::vector<std::pair<std::string, std::string>> cdts;
                     if (cmd.find("where") + 1) {
                         std::vector<std::string> w_tmp;
                         std::replace(conditions[1].begin(), conditions[1].end(), '(', ' ');
@@ -537,8 +552,21 @@ private:
                                 c_tmp[1].pop_back();
                             }
                             cdt.insert(std::multimap<std::string, std::string>::value_type(c_tmp[0], c_tmp[1]));
+                            cdts.emplace_back(c_tmp[0], c_tmp[1]);
                         }
                     }
+
+                    if(getKeyType(name, res[1]) == 0){ // int
+                        table<int> t(name, res[1]);
+                        t.openTable();
+                        t.updateAll(val, cdts);
+                    }
+                    else{ // string
+                        table<std::string> t(name, res[1]);
+                        t.openTable();
+                        t.updateAll(val, cdts);
+                    }
+
                     std::multimap<int, std::string> _map;
                     if (f.update_record(name.c_str(), res[1].c_str(), cdt, val)) {
                         std::cout << "Update record successfully!" << std::endl;

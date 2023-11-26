@@ -433,7 +433,9 @@ protected:
                 }
                 else{ // 找到该叶子节点，返回到父亲节点
                     _found = true;
-                    indexs[r->vals[i].second] = false;
+                    if(r->vals[i].second > 0){
+                        indexs[r->vals[i].second] = false;
+                    }
                     return 2;
                 }
             }
