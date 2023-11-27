@@ -1,6 +1,6 @@
 CXX = g++
 cxxflags = -Wall -g -fsanitize=address -std=c++23
-sources = ./src/*.cpp
+sources = src/*.cpp
 target = bin/nvSQL
 
 CXX_VERSION = $(shell $(CXX) -dumpfullversion)

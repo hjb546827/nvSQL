@@ -1,21 +1,44 @@
-//dataMgr.h
+/**
+ * @file		dataMgr.h
+ * @brief	    磁盘数据写入及读取
+ *              table.dat    数据文件
+ *                  record:
+ *                  # record头
+ *                  00000000 00000000 00000000 00000000
+ *                    byte1    byte2    byte3    byte4
+ *                  byte1：记录R占有的record总数，首条为(sizeof(R)-4)/maxRecSize+1，不为首条均为0
+ *                  byte2：该record长度的第一个字节
+ *                  byte3：该record长度的第二个字节
+ *                  byte4：下一个record位置，已是末尾则为0
+ *                  # record数据
+ *                  xxxxxx
+ *              table.ind  索引文件
+ *                  line1：b+Tree层序遍历序列
+ *                  line2：bpTree结构中indexs数组
+ *                  line3：bpTree结构中叶子节点数据
+ *              table.prof   配置文件
+ *                  # 前4个字节
+ *                  xxxx 主键类型int/string
+ *                  # 次4个字节
+ *                  xxxx 主键位置pos
+ *                  # 次4个字节
+ *                  xxxx 表属性个数n
+ *                  # 次n个字节
+ *                  x    对应属性是否为int类型
+ *                  # 后4个字节
+ *                  xxxx dat文件写指针位置
+ * @author		hjb
+ * @version		1.0
+ * @date		2023-11-21
+ * @copyright	Copyright (c) 2023
+ */
 
 #pragma once
 
-#include <cstddef>
-#include <cstdint>
-#include <cstdlib>
-#include <cstring>
-#include <filesystem>
-#include <iostream>
-#include <ostream>
-#include <regex>
 #include <vector>
 #include <string>
-#include <initializer_list>
-#include <format>
 #include <fstream>
-#include <cstdio>
+#include "base.h"
 
 using namespace std;
 
@@ -25,39 +48,10 @@ static const size_t maxPageSize = 8 * 1024;
 static const size_t maxPropSize = 1024 - 4;
 static const size_t bpTreeLevel = 3;
 
+/**
+ * @brief	记录
+ */
 struct record{
-/*
- * table.dat    数据文件
- * record:
- * # record头
- * 00000000 00000000 00000000 00000000
- *   byte1    byte2    byte3    byte4
- * byte1：记录R占有的record总数，首条为(sizeof(R)-4)/maxRecSize+1，不为首条均为0
- * byte2：该record长度的第一个字节
- * byte3：该record长度的第二个字节
- * byte4：下一个record位置，已是末尾则为0
- * # record数据
- * xxxxxx
-*/
-/**
- * table.ind  索引文件
- * line1：b+Tree层序遍历序列
- * line2：bpTree结构中indexs数组
- * line3：bpTree结构中叶子节点数据
-*/
-/**
- * table.prof   配置文件
- * # 前4个字节
- * xxxx 主键类型int/string
- * # 次4个字节
- * xxxx 主键位置pos
- * # 次4个字节
- * xxxx 表属性个数n
- * # 次n个字节
- * x    对应属性是否为int类型
- * # 后4个字节
- * xxxx dat文件写指针位置
-*/
 public:
     using value_type = char;
     value_type data[maxRecSize];
@@ -86,24 +80,40 @@ public:
         push_back(v);
     }
 
+    /**
+     * @brief	插入string数据
+     * @param	s
+     */
     void push_back(string s){
         int _size = s.size();
         convert(_size);
         convert(s);
     }
-
+    /**
+     * @brief	插入int数据
+     * @param	v
+     */
     void push_back(int v){
         int _size = 4;
         convert(_size);
         convert(v);
     }
 
+    /**
+     * @brief	存储到磁盘
+     * @param	f
+     */
     void save(fstream& f){
         int _size = size - 4;
         memcpy(data + 1, &_size, 2);
         f.write(data, maxRecSize);
     }
 
+    /**
+     * @brief	数据装入record结构体
+     * @param	v
+     * @return	size_t record剩余空间
+     */
     size_t fill(vector<string>& v){
         auto n = v.size();
         for(auto i = 0uz; i < n; ++i){
@@ -127,59 +137,52 @@ public:
         return n;
     }
 
+    /**
+     * @brief	写入文件头
+     * @param	v
+     */
     void make_head(int v){
         memcpy(data, &v, 4);
     }
 
+    /**
+     * @brief	打印record中数据
+     * @param	os
+     * @param	r
+     * @return	ostream& 
+     */
     friend ostream& operator<<(ostream& os, record& r){
         os << r.data << endl;
         return os;
     }
     
 private:
+    /**
+     * @brief	string类型的数据转为char*
+     * @param	s
+     */
     void convert(string& s){
         memcpy(data + size, s.data(), s.size());
         size += s.size();
     }
+    /**
+     * @brief	int类型的数据转为char*
+     * @param	v
+     */
     void convert(int& v){
         memcpy(data + size, &v, 4);
         size += 4;
     }
 };
 
-static inline void str_split(string str, vector<string> &v, const string split)
-{
-    char *s = new char[str.size() + 1];
-    strcpy(s, str.c_str());
-    char *p = strtok(s, split.c_str());
-
-    while (p)
-    {
-        v.push_back(p);
-        p = strtok(NULL, split.c_str());
-    }
-
-    delete[] s;
-}
-static inline void str_split(std::string str, std::vector<std::string> &v, std::regex reg)
-{
-    std::regex_token_iterator p(str.begin(), str.end(), reg, -1);
-    decltype(p) end;
-    for (; p != end; ++p)
-    {
-        v.push_back(p->str());
-    }
-}
-static inline void str_split(string str, vector<string> &v, const char split)
-{
-    str_split(str, v, string(1, split));
-}
-
+/**
+ * @brief	bpTree对象的辅助结构体，负责数据在磁盘上的写入与读取
+ */
 class dataMgr {
 private:
-    string filename = dataPos + "1/" + "1.dat";
-    string database = "1";
-    string table = "1";
+    string filename = dataPos + "db/" + "table.dat";    // 表的dat文件路径
+    string database = "db";     // 数据库名
+    string table = "table";     // 表名
     int keyType = 1; // string : 0; int : 1; 
 
 protected:
@@ -195,16 +198,31 @@ public:
     }
     ~dataMgr() noexcept {}
 
+    /**
+     * @brief	设置表的主键类型（int/string）
+     * @param	key_type    0/1
+     */
     void setKeyType(int key_type){
         this->keyType = key_type;
     }
 
+    /**
+     * @brief	初始化表存储
+     * @param	database
+     * @param	table
+     */
     void init(string database, string table){
         this->filename = dataPos + database + "/" + table + ".dat";
         this->database = database;
         this->table = table;
     }
 
+    /**
+     * @brief	创建表记录并存储
+     * @param	s
+     * @return	true 
+     * @return	false 
+     */
     bool createRecord(string& s){
         vector<record> recs;
         makeRecords(this->database, this->table, recs, s);
@@ -213,6 +231,11 @@ public:
         return true;
     }
 
+    /**
+     * @brief	在磁盘上读取表记录
+     * @param	s
+     * @param	pos
+     */
     void readRecord(string& s, int pos){
         if(!filesystem::exists(this->filename)){
             cout << "empty table!" << endl;
@@ -232,6 +255,11 @@ public:
         }
     }
     
+    /**
+     * @brief	在磁盘上更新表记录
+     * @param	pos
+     * @param	s
+     */
     void updateRecord(int pos, string s){
         vector<record> recs;
         makeRecords(this->database, this->table, recs, s);
@@ -254,6 +282,12 @@ public:
         }
     }
 
+    /**
+     * @brief	在磁盘上删除表记录
+     * @param	pos
+     * @return	true 
+     * @return	false 
+     */
     bool deleteRecord(int pos){
         fstream _fi(this->filename, ios::in | ios::out | ios::binary);
         int offset = pos * (maxRecSize + 1);
@@ -267,6 +301,9 @@ public:
         return true;
     }
 
+    /**
+     * @brief	无条件初始化磁盘数据
+     */
     void profInit(){
         string prof = dataPos + database + "/" + table + ".prof";
         if(!filesystem::exists(filename)){
@@ -286,6 +323,13 @@ public:
     }
 
 private:
+    /**
+     * @brief	在内存中实例化一个记录
+     * @param	database
+     * @param	tablename
+     * @param	recs
+     * @param	s
+     */
     void makeRecords(string const database, string const tablename, vector<record>& recs, string s){
         vector<string> _split;
         str_split(s, _split, regex("((\"\\s*,\\s*\")|(\"\\s*,\\s*)|(\\s*,\\s*\")|(\\s*,\\s*))"));
@@ -331,6 +375,12 @@ private:
         recs.front().make_head(cnts);
     }
 
+    /**
+     * @brief	将内存中的记录数据存储到磁盘
+     * @param	database
+     * @param	tablename
+     * @param	recs
+     */
     void makeTable(string const database, string const tablename, vector<record>& recs){
         string filename = dataPos + database + "/" + tablename + ".dat";
         if(!filesystem::exists(filename)){

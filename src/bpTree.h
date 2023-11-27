@@ -1,17 +1,17 @@
-//bpTree.h
+/**
+ * @file		bpTree.h
+ * @brief	    b+树
+ * @author		hjb
+ * @version		1.0
+ * @date		2023-11-21
+ * @copyright	Copyright (c) 2023
+ */
 
 #pragma once
 
-#include <cstddef>
-#include <cstdint>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <exception>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <initializer_list>
 #include <format>
 #include <queue>
 #include <string>
@@ -101,6 +101,9 @@ private:
         }
     };
 
+    /**
+     * @brief	叶子节点封装
+     */
     struct _leaf {
         _node* leaf;
         _leaf* next;
@@ -121,28 +124,27 @@ public:
     using leaf_ptr = leaf*;
 
     using data_type = keyValue::data_type;
-    using keyType = int;
+    using key_type = T;
     using node_value_t = node::value_type;
 
 private:
-    vector<leaf_ptr> leafs;
-    //vector<data_type> datas;
-    vector<bool> indexs;
-    dataMgr dm;
+    vector<leaf_ptr> leafs; // 对叶子节点进行包装，方便直接对其访问
+    vector<bool> indexs;    // 某位置的数据是否已被删除（按插入时间顺序排序）
+    dataMgr dm;             // 辅助类，对用户磁盘进行操作
 
 protected:
-    node_ptr root;
-    int m = 3; // m必须大于2
-    int min_num, max_num; 
+    node_ptr root;  // 树的根节点
+    int m = 3; // b+树阶数，必须大于2
+    int min_num, max_num; // 每个节点拥有的最小/最大数据块数（根节点及叶子节点例外）
 
 public:
-    string database = "1";
-    string table = "t1";
+    string database = "db"; // 数据库名
+    string table = "table";    // 表名
 
-    leaf_ptr head, tail;
+    leaf_ptr head, tail;    // 叶子节点的首位及末位的后一位
 
     bpTree(){
-        dm.setKeyType(keyTypeIsString<typename node_value_t::first_type>);
+        dm.setKeyType(keyTypeIsString<key_type>);
     };
     bpTree(string database, string table, int m = 3) noexcept {
         init(database, table, m);
@@ -399,7 +401,7 @@ protected:
      * @return  1       待处理
      * @return  2       上一次查找结果
      */
-    int _erase(node_ptr &r, node_value_t::first_type v, bool& _found, bool& _first){
+    int _erase(node_ptr &r, key_type v, bool& _found, bool& _first){
         if(r == nullptr){
             return 0;
         }
@@ -770,7 +772,7 @@ protected:
      * @param	v           关键字
      * @return	node_ptr*   含关键字的节点
      */
-    node_ptr* _find(node_ptr& r, node_value_t::first_type v) const {
+    node_ptr* _find(node_ptr& r, key_type v) const {
         if(r == nullptr){
             return nullptr;
         }
@@ -923,7 +925,7 @@ protected:
             vector<string> _vals;
             str_split(_input[pos], _vals, ',');
             for(auto _i : _vals){
-                (*p)->vals.push_back(bpTree::node_value_t(keyFormatConverter<typename node_value_t::first_type>(_i)(), -1));
+                (*p)->vals.push_back(bpTree::node_value_t(keyFormatConverter<key_type>(_i)(), -1));
                 (*p)->nodes.push_back(nullptr);
             }
             for(auto& _i : (*p)->nodes){
@@ -993,7 +995,7 @@ public:
         this->database = database;
         this->table = table;
         
-        dm.setKeyType(keyTypeIsString<typename node_value_t::first_type>);
+        dm.setKeyType(keyTypeIsString<key_type>);
         dm.init(database, table);
         
         string _ser = "";
@@ -1012,12 +1014,12 @@ public:
                 for(auto& i : it->leaf->vals){
                     int sz = 0;
                     file.read((char*)&sz, 4);
-                    if(keyTypeIsString<typename node_value_t::first_type>){
+                    if(keyTypeIsString<key_type>){
                         char iFirst[sz - 3];
                         iFirst[sz - 4] = '\0';
                         file.read(iFirst, sz - 4);
                         string ifst(iFirst);
-                        setIFirst(i.first, ifst);
+                        setIVal(i.first, ifst);
                     }
                     else{
                         int iFirst = 0;
@@ -1026,7 +1028,7 @@ public:
                     }
                     int iSecond = 0;
                     file.read((char*)&iSecond, 4);
-                    setIFirst(i.second, iSecond);
+                    setIVal(i.second, iSecond);
                 }
             }
             file.close();
@@ -1059,7 +1061,7 @@ public:
      * @brief	删除节点
      * @param	v   键值对
      */
-    bool erase(node_value_t::first_type v){
+    bool erase(key_type v){
         for(auto iter = head; iter != tail; iter = iter->next){
             for(auto i : iter->leaf->vals){
                 if(i.first == v){
@@ -1097,45 +1099,16 @@ public:
      * @param	v           key
      * @return	node_ptr*   节点
      */
-    node_ptr* getNode(node_value_t::first_type v){
+    node_ptr* getNode(key_type v){
         return _find(root, v);
     }
-
-    /**
-     * @brief	查找键值对的值
-     * @param	key     key
-     * @param	data    返回key对应的值
-     * @return	true    查找成功
-     * @return	false   查找失败
-     */
-    // template <input_type<keyValue> findType>
-    // bool findData(findType key, data_type*& data){
-    //     auto vKey = get_key<keyValue, findType>(key)();
-    //     auto res = getNode(vKey);
-    //     if(res == nullptr)
-    //         return false;
-    //     for(auto& i : (*res)->vals){
-    //         if(i.first == vKey){
-    //             data = &(datas[i.second]);
-    //             return true;
-    //         }
-    //     }
-    //     return false;
-    // }
 
     /**
     * @brief	更改关键字值
     * @param	v       // 键值对
     * @param	data    // data
     */
-    bool update(node_value_t::first_type key, data_type data){
-        // data_type *_data = nullptr;
-        // auto _res = findData(key, _data);
-        // if(!_res){
-        //     return false;
-        // }
-        // *_data = data;
-        
+    bool update(key_type key, data_type data){
         for(auto itr = head; itr != tail; itr = itr->next){
             for(auto i : itr->leaf->vals){
                 if(i.first == key){
@@ -1148,7 +1121,7 @@ public:
         return false;
     }
 
-    string find(node_value_t::first_type key){
+    string find(key_type key){
         string res = "";    
         auto _n = getNode(key);
         int pos = 0;
@@ -1163,12 +1136,6 @@ public:
         dm.readRecord(res, pos);
         return res;
     }
-
-    // string getData(keyType key){
-    //     data_type *_data;
-    //     findData(key, _data);
-    //     return _data->data;
-    // }
 
     /**
      * @brief	层序遍历并打印每层结构
@@ -1205,6 +1172,10 @@ public:
         _clear(root);
     }
 
+    /**
+     * @brief	b+数的序列化
+     * @return	string 以字符串形式表示及存储
+     */
     string serialize(){
         string output = "";
         levelOrder(root, output);
@@ -1212,6 +1183,9 @@ public:
         return output;
     }
 
+    /**
+     * @brief	以序列化的形式对树结构进行存储，同时记录每个节点的数据
+     */
     void save(){
         string _res = serialize();
 
@@ -1236,6 +1210,10 @@ public:
         file.close();
     }
 
+    /**
+     * @brief	反序列化
+     * @param	s   b+树序列化后的序列
+     */
     void deSerialize(string& s){
         vector<string> _res;
         str_split(s, _res, ' ');
@@ -1243,6 +1221,9 @@ public:
         rebuild(root, _res);
     }
 
+    /**
+     * @brief   无条件初始化该树在磁盘上的存储数据
+     */
     void recordInit(){
         dm.profInit();
     }

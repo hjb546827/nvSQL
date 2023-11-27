@@ -9,6 +9,10 @@
 
 #include <iostream>
 
+/**
+ * @brief	int/string转换为string
+ * @tparam	T int/string
+ */
 template <typename T>
 struct toStr{
     std::string s;
@@ -30,6 +34,10 @@ struct toStr<std::string>{
     }
 };
 
+/**
+ * @brief	主键转换为对应格式
+ * @tparam	T int/string
+ */
 template <typename T>
 struct keyFormatConverter{
     T v;
@@ -51,6 +59,10 @@ struct keyFormatConverter<int>{
     }
 };
 
+/**
+ * @brief	主键在磁盘中占用空间大小
+ * @tparam	T int/string
+ */
 template <typename T>
 struct getKeySize{
     int n;
@@ -72,6 +84,10 @@ struct getKeySize<int>{
     }
 };
 
+/**
+ * @brief	主键数据转换为char*格式
+ * @tparam	T int/string
+ */
 template <typename T>
 struct getKeyData{
     T key;
@@ -93,19 +109,26 @@ struct getKeyData<int>{
     }
 };
 
+/**
+ * @brief	将Q类型值赋值给T类型值，Q、T必须相同（欺骗编译器以通过检查）
+ * @tparam	T int/string
+ * @tparam	Q int/string
+ */
 template <typename T, typename Q>
-struct setIFirst{
-    setIFirst(T& ifst, Q& ifst2){
-        ;
-    }
+struct setIVal{
+    setIVal(T& ifst, Q& ifst2){}
 };
 template <typename T>
-struct setIFirst<T, T>{
-    setIFirst(T& ifst, T& ifst2){
+struct setIVal<T, T>{
+    setIVal(T& ifst, T& ifst2){
         ifst = ifst2;
     }
 };
 
+/**
+ * @brief	判断T是否为string类型
+ * @tparam	T int/string
+ */
 template <typename T>
 constexpr inline bool keyTypeIsString = true;
 template <>
