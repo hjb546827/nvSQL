@@ -7,11 +7,11 @@
  * @copyright   Copyright (c) 2023
  */
 
-#include "DML.h"
+#include "SQL.h"
 
 bool DML::insertRecord(const std::string &database, const std::string &tablename, const std::string &cmd) {
     std::vector<std::string> split_res;
-    std::vector<row_struct> data;
+    std::vector<tRow> data;
     std::string content = cmd.substr(cmd.find("(") + 1, cmd.find(")") - cmd.find("(") - 1);
     str_process(content);
     str_split(content, split_res, std::regex("\\s?,\\s?"));
@@ -19,7 +19,7 @@ bool DML::insertRecord(const std::string &database, const std::string &tablename
     for (auto i : split_res) {
         if (i.front() == ' ')
             i.erase(0, 1);
-        row_struct d;
+        tRow d;
         std::smatch res;
         if (std::regex_match(i, res, std::regex("-?\\d+"))) {
             d.type = INT;

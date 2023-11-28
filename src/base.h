@@ -15,7 +15,7 @@
 #include <iostream>
 #include <format>
 #include <regex>
-#include "data_struct.h"
+#include "tData.h"
 
 /**
  * @brief   字符串预处理
@@ -138,7 +138,7 @@ inline void draw_data(std::vector<int> &max_num, std::vector<std::string> &prop,
  * @param   prop    表属性
  * @param   data    表数据
  */
-inline void draw_data(std::vector<int> &max_num, std::vector<column_struct> &prop, std::vector<std::vector<std::string>> &data) {
+inline void draw_data(std::vector<int> &max_num, std::vector<tColumn> &prop, std::vector<std::vector<std::string>> &data) {
     std::vector<std::string> tmp_prop;
     for (auto i : prop) {
         tmp_prop.push_back(i.name);

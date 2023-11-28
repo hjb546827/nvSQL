@@ -7,7 +7,7 @@
  * @copyright   Copyright (c) 2023
  */
 
-#include "DDL.h"
+#include "SQL.h"
 
 bool DDL::createDatabase(const std::string &database) {
     std::string dbPath = "data/" + database;
@@ -51,9 +51,9 @@ bool DDL::dropDatabase(const std::string &database) {
 
 bool DDL::createTable(const std::string &database, const std::string &tablename, const string &cmd) {
     std::vector<std::string> split_res;
-    std::vector<column_struct> data;
+    std::vector<tColumn> data;
     std::string content = cmd.substr(cmd.find("(") + 1, cmd.find(")") - cmd.find("(") - 1);
-    std::vector<column_struct> primaryKey;
+    std::vector<tColumn> primaryKey;
     int pkPos = 0;
     str_process(content);
     str_split(content, split_res, std::regex("\\s?,\\s?"));
@@ -61,7 +61,7 @@ bool DDL::createTable(const std::string &database, const std::string &tablename,
     for (auto i = 0uz; i < split_res.size(); ++i) {
         if (split_res[i].front() == ' ')
             split_res[i].erase(0, 1);
-        column_struct d;
+        tColumn d;
         std::vector<std::string> s_tmp;
         str_split(split_res[i], s_tmp, " ");
         if (s_tmp.size() > 1) {

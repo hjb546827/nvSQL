@@ -7,11 +7,11 @@
  * @copyright   Copyright (c) 2023
  */
 
-#include "DQL.h"
+#include "SQL.h"
 
 bool DQL::selectRecord(const std::string &database, const std::vector<std::string> &res, const std::string &cmd) {
     std::vector<std::string> conditions, table_name, tmp1, tmp2;
-    std::vector<column_struct> properties;
+    std::vector<tColumn> properties;
     std::vector<std::vector<std::string>> select_res;
     std::vector<int> max_num;
     str_split(cmd, conditions, std::regex("\\swhere\\s"));
@@ -21,7 +21,7 @@ bool DQL::selectRecord(const std::string &database, const std::vector<std::strin
     // select
     if (res[1] != "*") {
         for (auto i : tmp2) {
-            column_struct tmp3;
+            tColumn tmp3;
             tmp3.name = i;
             tmp3.type = STRING;
             properties.push_back(tmp3);

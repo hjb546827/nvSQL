@@ -9,9 +9,7 @@
 
 #pragma once
 
-#include "DDL.h"
-#include "DML.h"
-#include "DQL.h"
+#include "SQL.h"
 
 class DB {
 private:

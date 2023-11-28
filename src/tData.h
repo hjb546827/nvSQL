@@ -19,13 +19,13 @@ enum dtype {
     STRING
 };
 
-class table_data {
+class tData {
 protected:
-    table_data() {}
-    table_data(dtype type) {
+    tData() {}
+    tData(dtype type) {
         this->type = type;
     }
-    ~table_data() {}
+    ~tData() {}
 
     virtual std::string print_type(dtype type) {
         if (type == INT)
@@ -45,39 +45,39 @@ public:
         return print_type(type);
     }
 };
-class column_struct : public table_data {
+class tColumn : public tData {
 public:
     std::string name = "unknown";
     bool is_primary = false;
 
-    column_struct() noexcept {}
-    column_struct(std::string name, dtype type, bool is_primary) noexcept {
+    tColumn() noexcept {}
+    tColumn(std::string name, dtype type, bool is_primary) noexcept {
         this->name = name;
         this->type = type;
         this->is_primary = is_primary;
     }
-    ~column_struct() noexcept {}
+    ~tColumn() noexcept {}
 
     void print_data() {
         std::cout << "data: [" << name << ", " << print_type(type) << ((is_primary == true) ? ", primary" : "") << "]" << std::endl;
     }
 };
 
-class row_struct : public table_data {
+class tRow : public tData {
 public:
     std::string s_value = "";
     int i_value = 0;
 
-    row_struct() noexcept {}
-    row_struct(std::string s_value) noexcept {
+    tRow() noexcept {}
+    tRow(std::string s_value) noexcept {
         this->s_value = s_value;
         this->type = STRING;
     }
-    row_struct(int i_value) noexcept {
+    tRow(int i_value) noexcept {
         this->i_value = i_value;
         this->type = INT;
     }
-    ~row_struct() noexcept {}
+    ~tRow() noexcept {}
 
     void print_data() {
         if (this->type == INT)
@@ -88,12 +88,12 @@ public:
             std::cout << "unknown data" << std::endl;
     }
 
-    static bool data_match(std::vector<column_struct> column, std::vector<row_struct> row);
-    static bool has_property(std::vector<column_struct> column, std::vector<column_struct> selected);
-    static bool has_property(std::vector<column_struct> column, std::string selected);
+    static bool data_match(std::vector<tColumn> column, std::vector<tRow> row);
+    static bool has_property(std::vector<tColumn> column, std::vector<tColumn> selected);
+    static bool has_property(std::vector<tColumn> column, std::string selected);
 };
 
-inline bool row_struct::data_match(std::vector<column_struct> column, std::vector<row_struct> row) {
+inline bool tRow::data_match(std::vector<tColumn> column, std::vector<tRow> row) {
     if (row.size() != column.size())
         return false;
     for (auto i = 0uz; i < row.size(); ++i) {
@@ -103,7 +103,7 @@ inline bool row_struct::data_match(std::vector<column_struct> column, std::vecto
 
     return true;
 }
-inline bool row_struct::has_property(std::vector<column_struct> column, std::vector<column_struct> selected) {
+inline bool tRow::has_property(std::vector<tColumn> column, std::vector<tColumn> selected) {
     bool tmp = false;
     if (column.size() < selected.size())
         return false;
@@ -120,7 +120,7 @@ inline bool row_struct::has_property(std::vector<column_struct> column, std::vec
     }
     return true;
 }
-inline bool row_struct::has_property(std::vector<column_struct> column, std::string selected) {
+inline bool tRow::has_property(std::vector<tColumn> column, std::string selected) {
     bool tmp = false;
     if (column.size() < 1uz)
         return false;
