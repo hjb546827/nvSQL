@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "bpTree.h"
+#include "bpTree/bpTree.h"
 #include <filesystem>
 #include <fstream>
 #include <vector>

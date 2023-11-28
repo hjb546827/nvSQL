@@ -38,7 +38,7 @@
 #include <vector>
 #include <string>
 #include <fstream>
-#include "base.h"
+#include "../base.h"
 
 using namespace std;
 

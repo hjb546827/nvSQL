@@ -9,10 +9,6 @@
 
 #pragma once
 
-#include <iostream>
-#include <format>
-#include <string>
-#include <vector>
 #include "DDL.h"
 #include "DML.h"
 #include "DQL.h"
