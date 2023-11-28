@@ -1,15 +1,15 @@
 /**
- * @file		DQL.cpp
- * @brief	    DQL
- * @author		hjb
- * @version		1.0
- * @date		2023-11-27
- * @copyright	Copyright (c) 2023
+ * @file        DQL.cpp
+ * @brief       DQL
+ * @author      hjb
+ * @version     1.0
+ * @date        2023-11-27
+ * @copyright   Copyright (c) 2023
  */
 
 #include "DQL.h"
 
-bool DQL::selectRecord(const std::string& database, const std::vector<std::string>& res, const std::string& cmd){
+bool DQL::selectRecord(const std::string &database, const std::vector<std::string> &res, const std::string &cmd) {
     std::vector<std::string> conditions, table_name, tmp1, tmp2;
     std::vector<column_struct> properties;
     std::vector<std::vector<std::string>> select_res;
@@ -54,19 +54,18 @@ bool DQL::selectRecord(const std::string& database, const std::vector<std::strin
             props.push_back(i);
         }
     }
-    if(table<>::getKeyType(database, table_name[1]) == 0){ // int
+    if (table<>::getKeyType(database, table_name[1]) == 0) { // int
         table<int> t(database, table_name[1]);
         t.openTable();
-        if(!t.readTable(widths, props, datas, cdts)){
+        if (!t.readTable(widths, props, datas, cdts)) {
             cout << "Table not exists!" << endl;
             return false;
         }
         draw_data(widths, props, datas);
-    }
-    else{ // string
+    } else { // string
         table<string> t(database, table_name[1]);
         t.openTable();
-        if(!t.readTable(widths, props, datas, cdts)){
+        if (!t.readTable(widths, props, datas, cdts)) {
             cout << "Table not exists!" << endl;
             return false;
         }

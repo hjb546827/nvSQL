@@ -65,7 +65,7 @@ private:
             sql_process(cmd);    // 语句解析
         }
     }
-    
+
     /*语句处理*/
     void sql_process(std::string &cmd) {
         std::string s_test = tmp + " " + cmd;
@@ -153,7 +153,7 @@ private:
             std::string create_table_xxx = "create\\stable\\s[a-zA-Z]+[a-zA-Z0-9]*";
             std::string name_type_constraint = "[a-zA-Z]+[a-zA-Z0-9]*\\s(int|string)\\s?(\\sprimary)?";
             std::string create_table_regex = "^\\s?" + create_table_xxx + "\\s?\\(\\s?(" +
-                    name_type_constraint + "\\s?,\\s?" + ")*(" + name_type_constraint + "\\s?,?\\s?)" + "\\)\\s?" + "$";
+                                             name_type_constraint + "\\s?,\\s?" + ")*(" + name_type_constraint + "\\s?,?\\s?)" + "\\)\\s?" + "$";
             // 正则表达式匹配
             if (std::regex_match(cmd.c_str(), std::regex(create_table_regex))) {
                 // 获取表名
@@ -180,7 +180,7 @@ private:
             std::string insert_table_xxx = "insert\\s[a-zA-Z]+[a-zA-Z0-9]*\\svalues";
             std::string tuple_content = "(-?\\d+|\".*\")";
             std::string insert_table_regex = "^\\s?" + insert_table_xxx + "\\s?\\(\\s?(" +
-                    tuple_content + "\\s?,\\s?)*" + tuple_content + "\\s?,?" + "\\s?\\)\\s?" + "$";
+                                             tuple_content + "\\s?,\\s?)*" + tuple_content + "\\s?,?" + "\\s?\\)\\s?" + "$";
             // 正则表达式匹配
             if (std::regex_match(cmd, std::regex(insert_table_regex))) {
                 // 获取表名

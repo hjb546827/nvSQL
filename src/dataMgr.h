@@ -1,6 +1,6 @@
 /**
- * @file		dataMgr.h
- * @brief	    磁盘数据写入及读取
+ * @file        dataMgr.h
+ * @brief       磁盘数据写入及读取
  *              table.dat    数据文件
  *                  record:
  *                  # record头
@@ -27,10 +27,10 @@
  *                  x    对应属性是否为int类型
  *                  # 后4个字节
  *                  xxxx dat文件写指针位置
- * @author		hjb
- * @version		1.0
- * @date		2023-11-21
- * @copyright	Copyright (c) 2023
+ * @author      hjb
+ * @version     1.0
+ * @date        2023-11-21
+ * @copyright   Copyright (c) 2023
  */
 
 #pragma once
@@ -49,84 +49,81 @@ static const size_t maxPropSize = 1024 - 4;
 static const size_t bpTreeLevel = 3;
 
 /**
- * @brief	记录
+ * @brief   记录
  */
-struct record{
+struct record {
 public:
     using value_type = char;
     value_type data[maxRecSize];
     uint16_t size = 0;
-    
-    record(){
+
+    record() {
         memset(data, 0, maxRecSize);
         size = 4;
     }
-    record(string s, bool _endr = true) : record(){
-        if(_endr){
+    record(string s, bool _endr = true) : record() {
+        if (_endr) {
             data[0] = 1;
-        }
-        else{
+        } else {
             data[0] = 0;
         }
         push_back(s);
     }
-    record(int v, bool _endr = true) : record(){
-        if(_endr){
+    record(int v, bool _endr = true) : record() {
+        if (_endr) {
             data[0] = 1;
-        }
-        else{
+        } else {
             data[0] = 0;
         }
         push_back(v);
     }
 
     /**
-     * @brief	插入string数据
-     * @param	s
+     * @brief   插入string数据
+     * @param   s
      */
-    void push_back(string s){
+    void push_back(string s) {
         int _size = s.size();
         convert(_size);
         convert(s);
     }
     /**
-     * @brief	插入int数据
-     * @param	v
+     * @brief   插入int数据
+     * @param   v
      */
-    void push_back(int v){
+    void push_back(int v) {
         int _size = 4;
         convert(_size);
         convert(v);
     }
 
     /**
-     * @brief	存储到磁盘
-     * @param	f
+     * @brief   存储到磁盘
+     * @param   f
      */
-    void save(fstream& f){
+    void save(fstream &f) {
         int _size = size - 4;
         memcpy(data + 1, &_size, 2);
         f.write(data, maxRecSize);
     }
 
     /**
-     * @brief	数据装入record结构体
-     * @param	v
-     * @return	size_t record剩余空间
+     * @brief   数据装入record结构体
+     * @param   v
+     * @return  size_t record剩余空间
      */
-    size_t fill(vector<string>& v){
+    size_t fill(vector<string> &v) {
         auto n = v.size();
-        for(auto i = 0uz; i < n; ++i){
-            if(v[i].front() == 'i'){
-                if(size + 4 + 4 >= (int)maxRecSize){
+        for (auto i = 0uz; i < n; ++i) {
+            if (v[i].front() == 'i') {
+                if (size + 4 + 4 >= (int)maxRecSize) {
                     return i;
                 }
                 v[i].erase(0, 1);
                 int iData = atoi(v[i].c_str());
                 push_back(iData);
-            }
-            else{
-                if(size + v[i].size() + 4 > (int)maxRecSize){
+            } else {
+                if (size + v[i].size() + 4 > (int)maxRecSize) {
                     return i;
                 }
                 v[i].erase(0, 1);
@@ -138,52 +135,52 @@ public:
     }
 
     /**
-     * @brief	写入文件头
-     * @param	v
+     * @brief   写入文件头
+     * @param   v
      */
-    void make_head(int v){
+    void make_head(int v) {
         memcpy(data, &v, 4);
     }
 
     /**
-     * @brief	打印record中数据
-     * @param	os
-     * @param	r
-     * @return	ostream& 
+     * @brief   打印record中数据
+     * @param   os
+     * @param   r
+     * @return  ostream&
      */
-    friend ostream& operator<<(ostream& os, record& r){
+    friend ostream &operator<<(ostream &os, record &r) {
         os << r.data << endl;
         return os;
     }
-    
+
 private:
     /**
-     * @brief	string类型的数据转为char*
-     * @param	s
+     * @brief   string类型的数据转为char*
+     * @param   s
      */
-    void convert(string& s){
+    void convert(string &s) {
         memcpy(data + size, s.data(), s.size());
         size += s.size();
     }
     /**
-     * @brief	int类型的数据转为char*
-     * @param	v
+     * @brief   int类型的数据转为char*
+     * @param   v
      */
-    void convert(int& v){
+    void convert(int &v) {
         memcpy(data + size, &v, 4);
         size += 4;
     }
 };
 
 /**
- * @brief	bpTree对象的辅助结构体，负责数据在磁盘上的写入与读取
+ * @brief   bpTree对象的辅助结构体，负责数据在磁盘上的写入与读取
  */
 class dataMgr {
 private:
     string filename = dataPos + "db/" + "table.dat";    // 表的dat文件路径
     string database = "db";     // 数据库名
     string table = "table";     // 表名
-    int keyType = 1; // string : 0; int : 1; 
+    int keyType = 1; // string : 0; int : 1;
 
 protected:
 
@@ -199,31 +196,31 @@ public:
     ~dataMgr() noexcept {}
 
     /**
-     * @brief	设置表的主键类型（int/string）
-     * @param	key_type    0/1
+     * @brief   设置表的主键类型（int/string）
+     * @param   key_type    0/1
      */
-    void setKeyType(int key_type){
+    void setKeyType(int key_type) {
         this->keyType = key_type;
     }
 
     /**
-     * @brief	初始化表存储
-     * @param	database
-     * @param	table
+     * @brief   初始化表存储
+     * @param   database
+     * @param   table
      */
-    void init(string database, string table){
+    void init(string database, string table) {
         this->filename = dataPos + database + "/" + table + ".dat";
         this->database = database;
         this->table = table;
     }
 
     /**
-     * @brief	创建表记录并存储
-     * @param	s
-     * @return	true 
-     * @return	false 
+     * @brief   创建表记录并存储
+     * @param   s
+     * @return  true
+     * @return  false
      */
-    bool createRecord(string& s){
+    bool createRecord(string &s) {
         vector<record> recs;
         makeRecords(this->database, this->table, recs, s);
         makeTable(this->database, this->table, recs);
@@ -232,21 +229,20 @@ public:
     }
 
     /**
-     * @brief	在磁盘上读取表记录
-     * @param	s
-     * @param	pos
+     * @brief   在磁盘上读取表记录
+     * @param   s
+     * @param   pos
      */
-    void readRecord(string& s, int pos){
-        if(!filesystem::exists(this->filename)){
+    void readRecord(string &s, int pos) {
+        if (!filesystem::exists(this->filename)) {
             cout << "empty table!" << endl;
             return;
-        }
-        else{
+        } else {
             ifstream file(this->filename, ios::in | ios::binary);
             int offset = pos * (maxRecSize + 1);
             file.seekg(offset + 1, ios::beg);
             uint16_t recSize = 0;
-            file.read((char*)&recSize, sizeof(recSize));
+            file.read((char *)&recSize, sizeof(recSize));
             char _res[recSize];
             file.seekg(1, ios::cur);
             file.read(_res, sizeof(_res));
@@ -254,24 +250,23 @@ public:
             file.close();
         }
     }
-    
+
     /**
-     * @brief	在磁盘上更新表记录
-     * @param	pos
-     * @param	s
+     * @brief   在磁盘上更新表记录
+     * @param   pos
+     * @param   s
      */
-    void updateRecord(int pos, string s){
+    void updateRecord(int pos, string s) {
         vector<record> recs;
         makeRecords(this->database, this->table, recs, s);
-        if(recs.size() > 1){
+        if (recs.size() > 1) {
             cout << "out of bounds!" << endl;
             return;
         }
-        if(!filesystem::exists(this->filename)){
+        if (!filesystem::exists(this->filename)) {
             cout << "empty table!" << endl;
             return;
-        }
-        else{
+        } else {
             fstream file(this->filename, ios::in | ios::out | ios::binary);
 
             int offset = pos * (maxRecSize + 1);
@@ -283,12 +278,12 @@ public:
     }
 
     /**
-     * @brief	在磁盘上删除表记录
-     * @param	pos
-     * @return	true 
-     * @return	false 
+     * @brief   在磁盘上删除表记录
+     * @param   pos
+     * @return  true
+     * @return  false
      */
-    bool deleteRecord(int pos){
+    bool deleteRecord(int pos) {
         fstream _fi(this->filename, ios::in | ios::out | ios::binary);
         int offset = pos * (maxRecSize + 1);
         _fi.seekp(offset, ios::beg);
@@ -302,19 +297,19 @@ public:
     }
 
     /**
-     * @brief	无条件初始化磁盘数据
+     * @brief   无条件初始化磁盘数据
      */
-    void profInit(){
+    void profInit() {
         string prof = dataPos + database + "/" + table + ".prof";
-        if(!filesystem::exists(filename)){
+        if (!filesystem::exists(filename)) {
             fstream file(filename, ios::binary | ios::out);
             file.seekp(maxPageSize - 1);
             file.write("", 1);
-            
+
             fstream _file(prof, ios::binary | ios::out | ios::in);
             _file.seekp(maxPropSize, ios::beg);
             int fptr = 0;
-            _file.write((char*)&fptr, 4);
+            _file.write((char *)&fptr, 4);
             _file.seekp(ios::beg);
             _file.close();
             file.seekp(ios::beg);
@@ -324,13 +319,13 @@ public:
 
 private:
     /**
-     * @brief	在内存中实例化一个记录
-     * @param	database
-     * @param	tablename
-     * @param	recs
-     * @param	s
+     * @brief   在内存中实例化一个记录
+     * @param   database
+     * @param   tablename
+     * @param   recs
+     * @param   s
      */
-    void makeRecords(string const database, string const tablename, vector<record>& recs, string s){
+    void makeRecords(string const database, string const tablename, vector<record> &recs, string s) {
         vector<string> _split;
         str_split(s, _split, regex("((\"\\s*,\\s*\")|(\"\\s*,\\s*)|(\\s*,\\s*\")|(\\s*,\\s*))"));
         string filename = dataPos + database + "/" + tablename + ".prof";
@@ -340,31 +335,31 @@ private:
         file.read(_r, 4);
         int fieldNums = 0;
         memcpy(&fieldNums, _r, 4);
-        if(fieldNums != (int)_split.size()){
+        if (fieldNums != (int)_split.size()) {
             cout << "data mismatch!" << endl;
             file.close();
             return;
         }
-        for(auto& i : _split){
+        for (auto &i : _split) {
             char _signal = 0;
             file.read(&_signal, 1);
             char _type = (_signal == 0 ? 's' : 'i');
             i.insert(i.begin(), _type);
         }
         file.close();
-        if(_split.front()[1] == '\"')
+        if (_split.front()[1] == '\"')
             _split.front().erase(1, 1);
-        if(_split.back().back() == '\"')
+        if (_split.back().back() == '\"')
             _split.back().pop_back();
 
         auto beg = 0uz;
         int cnts = 0;
-        while(beg < _split.size()){
+        while (beg < _split.size()) {
             record rec;
             beg = rec.fill(_split);
             recs.push_back(rec);
             cnts++;
-            if(beg < _split.size()){
+            if (beg < _split.size()) {
                 cout << "data out of bounds!" << endl;
                 remove((dataPos + database + "/" + tablename + ".dat").c_str());
                 remove((dataPos + database + "/" + tablename + ".ind").c_str());
@@ -376,19 +371,19 @@ private:
     }
 
     /**
-     * @brief	将内存中的记录数据存储到磁盘
-     * @param	database
-     * @param	tablename
-     * @param	recs
+     * @brief   将内存中的记录数据存储到磁盘
+     * @param   database
+     * @param   tablename
+     * @param   recs
      */
-    void makeTable(string const database, string const tablename, vector<record>& recs){
+    void makeTable(string const database, string const tablename, vector<record> &recs) {
         string filename = dataPos + database + "/" + tablename + ".dat";
-        if(!filesystem::exists(filename)){
+        if (!filesystem::exists(filename)) {
             fstream file(filename, ios::binary | ios::out);
             int cnts = 0;
             int fptr = 0;
-            for(auto i = 0uz; i < recs.size(); ++i){
-                if(recs.size() > 1 && i != recs.size() - 1){
+            for (auto i = 0uz; i < recs.size(); ++i) {
+                if (recs.size() > 1 && i != recs.size() - 1) {
                     recs[i].data[3] = cnts + 1;
                 }
                 recs[i].save(file);
@@ -399,13 +394,12 @@ private:
             }
             fstream _file(dataPos + database + "/" + tablename + ".prof", ios::binary | ios::out | ios::in);
             _file.seekp(maxPropSize, ios::beg);
-            _file.write((char*)&fptr, 4);
+            _file.write((char *)&fptr, 4);
             _file.seekp(ios::beg);
             _file.close();
             file.seekp(ios::beg);
             file.close();
-        }
-        else{
+        } else {
             fstream file(filename, ios::in | ios::out | ios::binary);
             fstream _file(dataPos + database + "/" + tablename + ".prof", ios::in | ios::out | ios::binary);
             int rptr = 0;
@@ -418,8 +412,8 @@ private:
             rptr = rptr == 0 ? -1 : rptr;
             int fptr = 0;
             file.seekp(rptr + 1, ios::beg);
-            for(auto i = 0uz; i < recs.size(); ++i){
-                if(recs.size() > 1 && i != recs.size() - 1){
+            for (auto i = 0uz; i < recs.size(); ++i) {
+                if (recs.size() > 1 && i != recs.size() - 1) {
                     recs[i].data[3] = cnts + 1;
                 }
                 recs[i].save(file);
@@ -429,7 +423,7 @@ private:
                 file.write("", 1);
             }
             _file.seekp(maxPropSize, ios::beg);
-            _file.write((char*)&fptr, 4);
+            _file.write((char *)&fptr, 4);
             _file.seekp(ios::beg);
             _file.close();
             file.seekp(ios::beg);

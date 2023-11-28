@@ -1,15 +1,15 @@
 /**
- * @file		DML.cpp
- * @brief	    DML
- * @author		hjb
- * @version		1.0
- * @date		2023-11-27
- * @copyright	Copyright (c) 2023
+ * @file        DML.cpp
+ * @brief       DML
+ * @author      hjb
+ * @version     1.0
+ * @date        2023-11-27
+ * @copyright   Copyright (c) 2023
  */
 
 #include "DML.h"
 
-bool DML::insertRecord(const std::string& database, const std::string& tablename, const std::string& cmd){
+bool DML::insertRecord(const std::string &database, const std::string &tablename, const std::string &cmd) {
     std::vector<std::string> split_res;
     std::vector<row_struct> data;
     std::string content = cmd.substr(cmd.find("(") + 1, cmd.find(")") - cmd.find("(") - 1);
@@ -43,13 +43,12 @@ bool DML::insertRecord(const std::string& database, const std::string& tablename
         data.push_back(d);
     }
 
-    if(table<>::getKeyType(database, tablename) == 0){ // int
+    if (table<>::getKeyType(database, tablename) == 0) { // int
         table<int> t(database, tablename);
         t.openTable();
         auto pk = t.getPrimaryKey();
         t.insertTable({data[pk].i_value, content});
-    }
-    else{ // string
+    } else { // string
         table<std::string> t(database, tablename);
         t.openTable();
         auto pk = t.getPrimaryKey();
@@ -59,7 +58,7 @@ bool DML::insertRecord(const std::string& database, const std::string& tablename
     return true;
 }
 
-bool DML::updateRecord(const std::string& database, const std::string& tablename, const std::string& cmd){
+bool DML::updateRecord(const std::string &database, const std::string &tablename, const std::string &cmd) {
     std::vector<std::string> conditions;
     str_split(cmd, conditions, std::regex("\\swhere\\s"));
     // set
@@ -92,19 +91,18 @@ bool DML::updateRecord(const std::string& database, const std::string& tablename
         }
     }
 
-    if(table<>::getKeyType(database, tablename) == 0){ // int
+    if (table<>::getKeyType(database, tablename) == 0) { // int
         table<int> t(database, tablename);
         t.openTable();
         return t.updateTable(setCdt, cdts);
-    }
-    else{ // string
+    } else { // string
         table<std::string> t(database, tablename);
         t.openTable();
         return t.updateTable(setCdt, cdts);
     }
 }
 
-bool DML::deleteRecord(const std::string& database, const std::string& tablename, const std::string& cmd){
+bool DML::deleteRecord(const std::string &database, const std::string &tablename, const std::string &cmd) {
     std::vector<std::string> conditions;
     str_split(cmd, conditions, std::regex("\\swhere\\s"));
     std::vector<std::pair<std::string, std::string>> cdts;
@@ -125,12 +123,11 @@ bool DML::deleteRecord(const std::string& database, const std::string& tablename
         }
     }
 
-    if(table<>::getKeyType(database, tablename) == 0){ // int
+    if (table<>::getKeyType(database, tablename) == 0) { // int
         table<int> t(database, tablename);
         t.openTable();
         return t.eraseTable(cdts);
-    }
-    else{ // string
+    } else { // string
         table<std::string> t(database, tablename);
         t.openTable();
         return t.eraseTable(cdts);
