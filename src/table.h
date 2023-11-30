@@ -12,6 +12,7 @@
 #include "bpTree/bpTree.h"
 #include <filesystem>
 #include <fstream>
+#include <string>
 #include <vector>
 
 /**
@@ -27,17 +28,6 @@ private:
     bpTree<T> t;                        // 表索引结构
 
 protected:
-    /**
-     * @brief   删除单个数据
-     * @param   key     主键值
-     * @return  true    成功
-     * @return  false   失败
-     */
-    bool erase(decltype(t)::key_type key) {
-        bool ret = t.erase(key);
-        t.save();
-        return ret;
-    }
     /**
      * @brief   删除单个数据
      * @param   key         主键值
@@ -75,7 +65,40 @@ protected:
                 return true;
             }
         }
-        erase(key);
+        bool ret = t.erase(key);
+        t.save();
+        return ret;
+    }
+    bool erase_some(string& _record, vector<pair<int, string>> &conditions, vector<bool>& erased) {
+        if (_record == "") {
+            return false;
+        }
+        char _rec[_record.size()];
+        memcpy(_rec, _record.data(), _record.size());
+        int _nowPos = 0;
+        int _nowSize = 0;
+        vector<string> fullData;
+        for (auto i = 0uz; i < props.size(); ++i) {
+            if (props[i].second == 1) {
+                int _iInt = 0;
+                memcpy((char *)&_iInt, _rec + _nowPos + 4, 4);
+                fullData.push_back(to_string(_iInt));
+                _nowPos += 8;
+            } else {
+                memcpy((char *)&_nowSize, _rec + _nowPos, 4);
+                char _iStr[_nowSize + 1];
+                memcpy(_iStr, _rec + _nowPos + 4, _nowSize);
+                _iStr[_nowSize] = '\0';
+                fullData.push_back(string(_iStr));
+                _nowPos += 4 + _nowSize;
+            }
+        }
+        for (auto i : conditions) {
+            if (fullData[i.first] != i.second) {
+                return true;
+            }
+        }
+        erased.back() = true;
         return true;
     }
 
@@ -89,7 +112,7 @@ protected:
      * @return  true        成功
      * @return  false       失败
      */
-    bool read(decltype(t)::key_type key, vector<int> &widths, vector<int> &properties,
+    inline bool read(decltype(t)::key_type key, vector<int> &widths, vector<int> &properties,
               vector<vector<string>> &datas, vector<pair<int, string>> &conditions) {
         string _record = t.find(key);
         if (_record == "") {
@@ -128,16 +151,43 @@ protected:
         }
         return true;
     }
-
-    /**
-     * @brief   更新单个数据
-     * @param   key     主键值
-     * @param   data    用于更新的数据
-     * @return  true    成功
-     * @return  false   失败
-     */
-    bool update(decltype(t)::key_type key, decltype(t)::keyValue::data_type data) {
-        return t.update(key, data);
+    inline bool read_some(string& _record, vector<int> &widths, vector<int> &properties,
+              vector<vector<string>> &datas, vector<pair<int, string>> &conditions) {
+        if (_record == "") {
+            return false;
+        }
+        char _rec[_record.size()];
+        memcpy(_rec, _record.data(), _record.size());
+        int _nowPos = 0;
+        int _nowSize = 0;
+        vector<string> fullData;
+        for (auto i = 0uz; i < props.size(); ++i) {
+            if (props[i].second == 1) {
+                int _iInt = 0;
+                memcpy((char *)&_iInt, _rec + _nowPos + 4, 4);
+                fullData.push_back(to_string(_iInt));
+                _nowPos += 8;
+            } else {
+                memcpy((char *)&_nowSize, _rec + _nowPos, 4);
+                char _iStr[_nowSize + 1];
+                memcpy(_iStr, _rec + _nowPos + 4, _nowSize);
+                _iStr[_nowSize] = '\0';
+                fullData.push_back(string(_iStr));
+                _nowPos += 4 + _nowSize;
+            }
+        }
+        for (auto i : conditions) {
+            if (fullData[i.first] != i.second) {
+                return true;
+            }
+        }
+        datas.push_back(vector<string> {});
+        auto &data = datas.back();
+        for (auto i = 0uz; i < properties.size(); ++i) {
+            data.push_back(fullData[properties[i]]);
+            widths[i] = max(widths[i], (int)data.back().size());
+        }
+        return true;
     }
 
     /**
@@ -186,17 +236,62 @@ protected:
         if (content.back() == ',') {
             content.pop_back();
         }
-        update(key, content);
+        t.update(key, content);
+        return true;
+    }
+    bool update_some(string& _record, string& _content, pair<int, string> &setCdt, vector<pair<int, string>> &conditions) {
+        if (_record == "") {
+            return false;
+        }
+        char _rec[_record.size()];
+        memcpy(_rec, _record.data(), _record.size());
+        int _nowPos = 0;
+        int _nowSize = 0;
+        vector<string> fullData;
+        for (auto i = 0uz; i < props.size(); ++i) {
+            if (props[i].second == 1) {
+                int _iInt = 0;
+                memcpy((char *)&_iInt, _rec + _nowPos + 4, 4);
+                fullData.push_back(to_string(_iInt));
+                _nowPos += 8;
+            } else {
+                memcpy((char *)&_nowSize, _rec + _nowPos, 4);
+                char _iStr[_nowSize + 1];
+                memcpy(_iStr, _rec + _nowPos + 4, _nowSize);
+                _iStr[_nowSize] = '\0';
+                fullData.push_back(string(_iStr));
+                _nowPos += 4 + _nowSize;
+            }
+        }
+        for (auto i : conditions) {
+            if (fullData[i.first] != i.second) {
+                return true;
+            }
+        }
+        fullData[setCdt.first] = setCdt.second;
+        string content = "";
+        for (auto i : fullData) {
+            content += (i + ",");
+        }
+        if (content.back() == ',') {
+            content.pop_back();
+        }
+        _content = content;
         return true;
     }
 
 public:
-    string database = "db"; // 数据库名
-    string name = "table";  // 表名
+    string database = ""; // 数据库名
+    string name = "";  // 表名
     int primaryKey = 0;     // 主键在属性列表中位置
 
-    table() = delete;
+    table() = default;
     table(string const database, string const tablename) noexcept {
+        init(database, tablename);
+    }
+    ~table() noexcept {}
+
+    void init(string const database, string const tablename) noexcept {
         this->database = database;
         this->name = tablename;
         this->dataFilename = dataPos + database + "/" + tablename + ".dat";
@@ -222,7 +317,12 @@ public:
             fi.close();
         }
     }
-    ~table() noexcept {}
+
+    void renew(){
+        this->primaryKey = 0;
+        this->props.clear();
+        this->t.clear();
+    }
 
     /**
      * @brief   在磁盘上创建表
@@ -335,12 +435,26 @@ public:
                 }
             }
         }
-
+        
+        vector<typename decltype(t)::key_type> keys;
         for (auto itr = t.head; itr != t.tail; itr = itr->next) {
             for (auto i : itr->leaf->vals) {
-                erase(i.first, _cdts);
+                keys.push_back(i.first);
+                //erase(i.first, _cdts);
             }
         }
+        int sz = keys.size();
+        vector<string> reses(sz);
+        vector<string> contents(sz, "");
+        vector<int> poses(sz, -1);
+        vector<bool> eraseds;
+        t.find_some(keys, reses, poses);
+        for(auto i = 0; i < sz; ++i){
+            //erase(key, _cdts);
+            eraseds.push_back(false);
+            erase_some(reses[i], _cdts, eraseds);
+        }
+        t.erase(keys, poses, eraseds);
         return true;
     }
 
@@ -392,13 +506,18 @@ public:
                 properties.push_back(props[i].first);
             }
         }
-
         for (auto i : _props)
             widths.push_back(props[i].first.size());
+        vector<typename decltype(t)::key_type> keys;
         for (auto itr = t.head; itr != t.tail; itr = itr->next) {
             for (auto i : itr->leaf->vals) {
-                read(i.first, widths, _props, datas, _cdts);
+                keys.push_back(i.first);
             }
+        }
+        vector<string> reses(keys.size());
+        t.find_some(keys, reses);
+        for(auto& res : reses){
+            read_some(res, widths, _props, datas, _cdts);
         }
         return true;
     }
@@ -441,12 +560,21 @@ public:
                 return false;
             }
         }
-
+        vector<typename decltype(t)::key_type> keys;
         for (auto itr = t.head; itr != t.tail; itr = itr->next) {
             for (auto i : itr->leaf->vals) {
-                update(i.first, _setCdt, _cdts);
+                keys.push_back(i.first);
             }
         }
+        int sz = keys.size();
+        vector<string> reses(sz);
+        vector<string> contents(sz, "");
+        vector<int> poses(sz, -1);
+        t.find_some(keys, reses, poses);
+        for(auto i = 0uz; i < reses.size(); ++i){
+            update_some(reses[i], contents[i], _setCdt, _cdts);
+        }
+        t.update_some(contents, poses);
         return true;
     }
 

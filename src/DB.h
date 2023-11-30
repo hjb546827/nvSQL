@@ -10,6 +10,9 @@
 #pragma once
 
 #include "SQL.h"
+#include <regex>
+#include <string>
+#include <vector>
 
 class DB {
 private:
@@ -19,6 +22,10 @@ private:
     int flag = 0;            // 循环控制
     int cmd_end = 1;         // 语句结束判断
     int paren_end = 1;       // 括号匹配
+
+    cache<table> indexCache;
+
+    CPUTimer times;
 
 public:
     DB() noexcept {
@@ -55,6 +62,7 @@ private:
             // 读取用户指令
             if (cmd.size() < 1)
                 return;
+            times.start();
             str_process(cmd); // 指令预处理
             sql_process(cmd);    // 语句解析
         }
@@ -127,49 +135,51 @@ private:
     bool sql_execute(const std::vector<std::string> &res, const std::string &cmd) {
         bool status = true;
         // create xxx xxx
-        {
+        if (res[0] == "create") {
             // create database
-            std::string create_database_xxx = "create\\sdatabase\\s[a-zA-Z]+[a-zA-Z0-9]*";
-            std::string create_database_regex = "^\\s?" + create_database_xxx + "\\s?" + "$";
-            // 正则表达式匹配
-            if (std::regex_match(cmd, std::regex(create_database_regex))) {
-                // 创建数据库
-                if (DDL::createDatabase(res[2])) {
-                    std::cout << "Create database successfully!" << std::endl;
-                } else {
-                    status &= false;
+            if (res[1] == "database") {
+                std::string create_database_xxx = "create\\sdatabase\\s[a-zA-Z]+[a-zA-Z0-9]*";
+                std::string create_database_regex = "^\\s?" + create_database_xxx + "\\s?" + "$";
+                // 正则表达式匹配
+                if (std::regex_match(cmd, std::regex(create_database_regex))) {
+                    // 创建数据库
+                    if (DDL::createDatabase(res[2], times)) {
+                        std::cout << "Create database successfully!" << std::endl;
+                        times.print();
+                    } else {
+                        status &= false;
+                    }
+                    return status;
                 }
-                return status;
-            }
-        }
-        {
-            // create table
-            std::string create_table_xxx = "create\\stable\\s[a-zA-Z]+[a-zA-Z0-9]*";
-            std::string name_type_constraint = "[a-zA-Z]+[a-zA-Z0-9]*\\s(int|string)\\s?(\\sprimary)?";
-            std::string create_table_regex = "^\\s?" + create_table_xxx + "\\s?\\(\\s?(" +
-                                             name_type_constraint + "\\s?,\\s?" + ")*(" + name_type_constraint + "\\s?,?\\s?)" + "\\)\\s?" + "$";
-            // 正则表达式匹配
-            if (std::regex_match(cmd.c_str(), std::regex(create_table_regex))) {
-                // 获取表名
-                std::string table_name = res[2];
-                if (table_name.find("(") + 1) {
-                    while (table_name.back() != '(') {
+            } else if (res[1] == "table") {
+                // create table
+                std::string create_table_xxx = "create\\stable\\s[a-zA-Z]+[a-zA-Z0-9]*";
+                std::string name_type_constraint = "[a-zA-Z]+[a-zA-Z0-9]*\\s(int|string)\\s?(\\sprimary)?";
+                std::string create_table_regex = "^\\s?" + create_table_xxx + "\\s?\\(\\s?(" +
+                                                 name_type_constraint + "\\s?,\\s?" + ")*(" + name_type_constraint + "\\s?,?\\s?)" + "\\)\\s?" + "$";
+                // 正则表达式匹配
+                if (std::regex_match(cmd.c_str(), std::regex(create_table_regex))) {
+                    // 获取表名
+                    std::string table_name = res[2];
+                    if (table_name.find("(") + 1) {
+                        while (table_name.back() != '(') {
+                            table_name.pop_back();
+                        }
                         table_name.pop_back();
                     }
-                    table_name.pop_back();
+                    // 创建表
+                    if (DDL::createTable(name, table_name, cmd, indexCache, times)) {
+                        std::cout << "Create table successfully!" << std::endl;
+                        times.print();
+                    } else {
+                        status &= false;
+                    }
+                    return status;
                 }
-                // 创建表
-                if (DDL::createTable(name, table_name, cmd)) {
-                    std::cout << "Create table successfully!" << std::endl;
-                } else {
-                    status &= false;
-                }
-                return status;
             }
         }
-
         // insert xxx xxx
-        {
+        else if (res[0] == "insert") {
             // insert xxx values (xxx)
             std::string insert_table_xxx = "insert\\s[a-zA-Z]+[a-zA-Z0-9]*\\svalues";
             std::string tuple_content = "(-?\\d+|\".*\")";
@@ -180,17 +190,17 @@ private:
                 // 获取表名
                 std::string table_name = res[1];
                 // 插入表数据
-                if (DML::insertRecord(name, table_name, cmd))
+                if (DML::insertRecord(name, table_name, cmd, indexCache, times)) {
                     std::cout << "Insert table successfully!" << std::endl;
-                else
+                    times.print();
+                } else
                     status &= false;
 
                 return status;
             }
         }
-
         // use xxx
-        {
+        else if (res[0] == "use") {
             // use xxx
             std::string use_database_xxx = "use\\s[a-zA-Z]+[a-zA-Z0-9]*";
             std::string use_database_regex = "^\\s?" + use_database_xxx + "\\s?" + "$";
@@ -200,54 +210,74 @@ private:
                 if (searchDatabase(res[1])) {
                     // 切换所选中数据库
                     name = res[1];
+                    times.end();
                     std::cout << "Change database successfully!" << std::endl;
+                    times.print();
                 } else {
                     status &= false;
                 }
                 return status;
             }
         }
-
         // select xxx from xxx [where xxx = xxx]
-        {
+        else if (res[0] == "select") {
             // select xxx from xxx
-            std::string property_name = "([a-zA-Z]+[a-zA-Z0-9]*\\s?,\\s?)*[a-zA-Z]+[a-zA-Z0-9]*";
-            std::string simple_condition = "([a-zA-Z]+[a-zA-Z0-9]*\\s?=\\s?((-?\\d+)|(\".*\")))";
-            std::string paren_condition = std::format("(\\(\\s?{}\\s?\\))", simple_condition);
-            std::string single_condition = std::format("({0}|{1})", simple_condition, paren_condition);
-            std::string mutiply_condition = std::format("({0}|({0}\\s?,\\s?)*{0}|\\(\\s?({0}\\s?,\\s?)*{0}\\s?\\))", single_condition);
-            std::string where_xxx = std::format("(\\swhere\\s{})?", mutiply_condition);
-            std::string select_xxx = std::format("select\\s({}|\\*)\\sfrom\\s[a-zA-Z]+[a-zA-Z0-9]*", property_name);
-            std::string select_regex = "^\\s?" + select_xxx + where_xxx + "\\s?" + "$";
+            const std::string property_name = "([a-zA-Z]+[a-zA-Z0-9]*\\s?,\\s?)*[a-zA-Z]+[a-zA-Z0-9]*";
+            const std::string simple_condition = "([a-zA-Z]+[a-zA-Z0-9]*\\s?=\\s?((-?\\d+)|(\".*\")))";
+            const std::string single_condition = std::format("\\(?{}\\)?", simple_condition);
+            const std::string select_xxx = std::format("select\\s({}|\\*)\\sfrom\\s[a-zA-Z]+[a-zA-Z0-9]*", property_name);
+            const std::string select_regex = "^\\s?" + select_xxx + "\\s?" + "$";
+            vector<string> spl;
+            str_split(cmd, spl, std::regex(R"(\s?where\s?)"));
             // 正则表达式匹配
-            if (std::regex_match(cmd, std::regex(select_regex))) {
+            if (std::regex_match(spl[0], std::regex(select_regex))) {
+                if(spl.size() > 1uz){
+                    vector<string> spl2;
+                    str_split(spl[1], spl2, std::regex("\\s?,\\s?"));
+                    for(auto& i : spl2){cout << i << endl;
+                        if(!std::regex_match(i, std::regex(single_condition))){
+                            status &= false;
+                            return status;
+                        }
+                    }
+                }
                 // 查询表记录
-                if (DQL::selectRecord(name, res, cmd)) {
+                if (DQL::selectRecord(name, res, cmd, indexCache, times)) {
                     std::cout << "Select record successfully!" << std::endl;
+                    times.print();
                 } else {
                     status &= false;
                 }
                 return status;
             }
         }
-
         // delete xxx [where xxx]
-        {
+        else if (res[0] == "delete") {
             // delete xxx
             std::string delete_table = "delete\\s[a-zA-Z]+[a-zA-Z0-9]*";
             std::string simple_condition = "([a-zA-Z]+[a-zA-Z0-9]*\\s?=\\s?((-?\\d+)|(\".*\")))";
-            std::string paren_condition = std::format("(\\(\\s?{}\\s?\\))", simple_condition);
-            std::string single_condition = std::format("({0}|{1})", simple_condition, paren_condition);
-            std::string mutiply_condition = std::format("({0}|({0}\\s?,\\s?)*{0}|\\(\\s?({0}\\s?,\\s?)*{0}\\s?\\))", single_condition);
-            std::string where_xxx = std::format("(\\swhere\\s{})?", mutiply_condition);
-            std::string delete_table_regex = "^\\s?" + delete_table + where_xxx + "\\s?" + "$";
+            std::string single_condition = std::format("\\(?{}\\)?", simple_condition);
+            std::string delete_table_regex = "^\\s?" + delete_table + "\\s?" + "$";
+            vector<string> spl;
+            str_split(cmd, spl, std::regex(R"(\s?where\s?)"));
             // 正则表达式匹配
-            if (std::regex_match(cmd, std::regex(delete_table_regex))) {
+            if (std::regex_match(spl[0], std::regex(delete_table_regex))) {
+                if(spl.size() > 1uz){
+                    vector<string> spl2;
+                    str_split(spl[1], spl2, std::regex("\\s?,\\s?"));
+                    for(auto& i : spl2){
+                        if(!std::regex_match(i, std::regex(single_condition))){
+                            status &= false;
+                            return status;
+                        }
+                    }
+                }
                 // 表存在判定
                 if (searchTable(name, res[1])) {
                     // 删除表记录
-                    if (DML::deleteRecord(name, res[1], cmd)) {
+                    if (DML::deleteRecord(name, res[1], cmd, indexCache, times)) {
                         std::cout << "Delete record successfully!" << std::endl;
+                        times.print();
                     } else {
                         status &= false;
                     }
@@ -257,24 +287,33 @@ private:
                 return status;
             }
         }
-
         // update xxx set xxx [where xxx]
-        {
+        else if (res[0] == "update") {
             // update xxx set xxx
             std::string update_xxx = "update\\s[a-zA-Z]+[a-zA-Z0-9]*\\sset\\s";
             std::string simple_condition = "([a-zA-Z]+[a-zA-Z0-9]*\\s?=\\s?((-?\\d+)|(\".*\")))";
-            std::string paren_condition = std::format("(\\(\\s?{}\\s?\\))", simple_condition);
-            std::string single_condition = std::format("({0}|{1})", simple_condition, paren_condition);
-            std::string mutiply_condition = std::format("({0}|({0}\\s?,\\s?)*{0}|\\(\\s?({0}\\s?,\\s?)*{0}\\s?\\))", single_condition);
-            std::string where_xxx = std::format("(\\swhere\\s{})?", mutiply_condition);
-            std::string update_regex = "^\\s?" + update_xxx + simple_condition + where_xxx + "\\s?" + "$";
+            std::string single_condition = std::format("\\(?{}\\)?", simple_condition);
+            std::string update_regex = "^\\s?" + update_xxx + simple_condition + "\\s?" + "$";
+            vector<string> spl;
+            str_split(cmd, spl, std::regex(R"(\s?where\s?)"));
             // 正则表达式匹配
-            if (std::regex_match(cmd, std::regex(update_regex))) {
+            if (std::regex_match(spl[0], std::regex(update_regex))) {
+                if(spl.size() > 1uz){
+                    vector<string> spl2;
+                    str_split(spl[1], spl2, std::regex("\\s?,\\s?"));
+                    for(auto& i : spl2){
+                        if(!std::regex_match(i, std::regex(single_condition))){
+                            status &= false;
+                            return status;
+                        }
+                    }
+                }
                 // 表存在判定
                 if (searchTable(name, res[1])) {
                     // 更新表记录
-                    if (DML::updateRecord(name, res[1], cmd)) {
+                    if (DML::updateRecord(name, res[1], cmd, indexCache, times)) {
                         std::cout << "Update record successfully!" << std::endl;
+                        times.print();
                     } else {
                         status &= false;
                     }
@@ -284,48 +323,51 @@ private:
                 return status;
             }
         }
-
         // drop xxx xxx
-        {
+        else if (res[0] == "drop") {
             // drop database xxx
-            std::string drop_database_xxx = "drop\\sdatabase\\s[a-zA-Z]+[a-zA-Z0-9]*";
-            std::string drop_database_regex = "^\\s?" + drop_database_xxx + "\\s?" + "$";
-            // 正则表达式匹配
-            if (std::regex_match(cmd, std::regex(drop_database_regex))) {
-                // 数据库存在判定
-                if (searchDatabase(res[2])) {
-                    // 若删除当前操作数据库则切换
-                    if (name == res[2]) {
-                        name = "db";
-                    }
-                    // 删除数据库
-                    if (DDL::dropDatabase(res[2])) {
-                        std::cout << "Drop database successfully!" << std::endl;
+            if (res[1] == "database") {
+                std::string drop_database_xxx = "drop\\sdatabase\\s[a-zA-Z]+[a-zA-Z0-9]*";
+                std::string drop_database_regex = "^\\s?" + drop_database_xxx + "\\s?" + "$";
+                // 正则表达式匹配
+                if (std::regex_match(cmd, std::regex(drop_database_regex))) {
+                    // 数据库存在判定
+                    if (searchDatabase(res[2])) {
+                        // 若删除当前操作数据库则切换
+                        if (name == res[2]) {
+                            name = "db";
+                        }
+                        // 删除数据库
+                        if (DDL::dropDatabase(res[2], times)) {
+                            std::cout << "Drop database successfully!" << std::endl;
+                            times.print();
+                        } else {
+                            status &= false;
+                        }
                     } else {
                         status &= false;
                     }
-                } else {
-                    status &= false;
+                    return status;
                 }
-                return status;
             }
-        }
-        {
             // drop table xxx
-            std::string drop_table_xxx = "drop\\stable\\s[a-zA-Z]+[a-zA-Z0-9]*";
-            std::string drop_table_regex = "^\\s?" + drop_table_xxx + "\\s?" + "$";
-            // 正则表达式匹配
-            if (std::regex_match(cmd, std::regex(drop_table_regex))) {
-                if (searchTable(name, res[2])) {
-                    if (DDL::dropTable(name, res[2])) {
-                        std::cout << "Drop table successfully!" << std::endl;
+            else if (res[1] == "table") {
+                std::string drop_table_xxx = "drop\\stable\\s[a-zA-Z]+[a-zA-Z0-9]*";
+                std::string drop_table_regex = "^\\s?" + drop_table_xxx + "\\s?" + "$";
+                // 正则表达式匹配
+                if (std::regex_match(cmd, std::regex(drop_table_regex))) {
+                    if (searchTable(name, res[2])) {
+                        if (DDL::dropTable(name, res[2], times)) {
+                            std::cout << "Drop table successfully!" << std::endl;
+                            times.print();
+                        } else {
+                            status &= false;
+                        }
                     } else {
                         status &= false;
                     }
-                } else {
-                    status &= false;
+                    return status;
                 }
-                return status;
             }
         }
 

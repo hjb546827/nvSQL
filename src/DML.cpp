@@ -9,7 +9,8 @@
 
 #include "SQL.h"
 
-bool DML::insertRecord(const std::string &database, const std::string &tablename, const std::string &cmd) {
+bool DML::insertRecord(const std::string &database, const std::string &tablename, const std::string &cmd, 
+        cache<table>& indexCache, CPUTimer& times) {
     std::vector<std::string> split_res;
     std::vector<tRow> data;
     std::string content = cmd.substr(cmd.find("(") + 1, cmd.find(")") - cmd.find("(") - 1);
@@ -44,21 +45,64 @@ bool DML::insertRecord(const std::string &database, const std::string &tablename
     }
 
     if (table<>::getKeyType(database, tablename) == 0) { // int
-        table<int> t(database, tablename);
-        t.openTable();
+        int tableID = -1;
+        for(auto i = 0; i < (int)indexCache.iCaches.size(); ++i){
+            if(indexCache.iCaches[i].database == database && indexCache.iCaches[i].name == tablename){
+                if(indexCache.last == i){
+                    indexCache.last = 3 - indexCache.last - indexCache.first;
+                    indexCache.first = i;
+                }
+                else{
+                    indexCache.first = i;
+                }
+                tableID = i;
+                break;
+            }
+        }
+        if(tableID == -1){
+            tableID = indexCache.last;
+            indexCache.iCaches[tableID].renew();
+            indexCache.iCaches[tableID].init(database, tablename);
+            indexCache.iCaches[tableID].openTable();
+            indexCache.last = 3 - indexCache.first - indexCache.last;
+            indexCache.first = tableID;
+        }
+        table<int>& t = indexCache.iCaches[tableID];
         auto pk = t.getPrimaryKey();
         t.insertTable({data[pk].i_value, content});
     } else { // string
-        table<std::string> t(database, tablename);
-        t.openTable();
+        int tableID = -1;
+        for(auto i = 0; i < (int)indexCache.sCaches.size(); ++i){
+            if(indexCache.sCaches[i].database == database && indexCache.sCaches[i].name == tablename){
+                if(indexCache.last == i){
+                    indexCache.last = 3 - indexCache.last - indexCache.first;
+                    indexCache.first = i;
+                }
+                else{
+                    indexCache.first = i;
+                }
+                tableID = i;
+                break;
+            }
+        }
+        if(tableID == -1){
+            tableID = indexCache.last;
+            indexCache.sCaches[tableID].renew();
+            indexCache.sCaches[tableID].init(database, tablename);
+            indexCache.sCaches[tableID].openTable();
+            indexCache.last = 3 - indexCache.first - indexCache.last;
+            indexCache.first = tableID;
+        }
+        table<std::string>& t = indexCache.sCaches[tableID];
         auto pk = t.getPrimaryKey();
         t.insertTable({data[pk].s_value, content});
     }
-
+    times.end();
     return true;
 }
 
-bool DML::updateRecord(const std::string &database, const std::string &tablename, const std::string &cmd) {
+bool DML::updateRecord(const std::string &database, const std::string &tablename, const std::string &cmd, 
+        cache<table>& indexCache, CPUTimer& times) {
     std::vector<std::string> conditions;
     str_split(cmd, conditions, std::regex("\\swhere\\s"));
     // set
@@ -92,17 +136,64 @@ bool DML::updateRecord(const std::string &database, const std::string &tablename
     }
 
     if (table<>::getKeyType(database, tablename) == 0) { // int
-        table<int> t(database, tablename);
-        t.openTable();
-        return t.updateTable(setCdt, cdts);
+        int tableID = -1;
+        for(auto i = 0; i < (int)indexCache.iCaches.size(); ++i){
+            if(indexCache.iCaches[i].database == database && indexCache.iCaches[i].name == tablename){
+                if(indexCache.last == i){
+                    indexCache.last = 3 - indexCache.last - indexCache.first;
+                    indexCache.first = i;
+                }
+                else{
+                    indexCache.first = i;
+                }
+                tableID = i;
+                break;
+            }
+        }
+        if(tableID == -1){
+            tableID = indexCache.last;
+            indexCache.iCaches[tableID].renew();
+            indexCache.iCaches[tableID].init(database, tablename);
+            indexCache.iCaches[tableID].openTable();
+            indexCache.last = 3 - indexCache.first - indexCache.last;
+            indexCache.first = tableID;
+        }
+        table<int>& t = indexCache.iCaches[tableID];
+        auto res = t.updateTable(setCdt, cdts);
+        times.end();
+        return res;
     } else { // string
-        table<std::string> t(database, tablename);
-        t.openTable();
-        return t.updateTable(setCdt, cdts);
+        int tableID = -1;
+        for(auto i = 0; i < (int)indexCache.sCaches.size(); ++i){
+            if(indexCache.sCaches[i].database == database && indexCache.sCaches[i].name == tablename){
+                if(indexCache.last == i){
+                    indexCache.last = 3 - indexCache.last - indexCache.first;
+                    indexCache.first = i;
+                }
+                else{
+                    indexCache.first = i;
+                }
+                tableID = i;
+                break;
+            }
+        }
+        if(tableID == -1){
+            tableID = indexCache.last;
+            indexCache.sCaches[tableID].renew();
+            indexCache.sCaches[tableID].init(database, tablename);
+            indexCache.sCaches[tableID].openTable();
+            indexCache.last = 3 - indexCache.first - indexCache.last;
+            indexCache.first = tableID;
+        }
+        table<std::string>& t = indexCache.sCaches[tableID];
+        auto res = t.updateTable(setCdt, cdts);
+        times.end();
+        return res;
     }
 }
 
-bool DML::deleteRecord(const std::string &database, const std::string &tablename, const std::string &cmd) {
+bool DML::deleteRecord(const std::string &database, const std::string &tablename, const std::string &cmd, 
+        cache<table>& indexCache, CPUTimer& times) {
     std::vector<std::string> conditions;
     str_split(cmd, conditions, std::regex("\\swhere\\s"));
     std::vector<std::pair<std::string, std::string>> cdts;
@@ -124,12 +215,58 @@ bool DML::deleteRecord(const std::string &database, const std::string &tablename
     }
 
     if (table<>::getKeyType(database, tablename) == 0) { // int
-        table<int> t(database, tablename);
-        t.openTable();
-        return t.eraseTable(cdts);
+        int tableID = -1;
+        for(auto i = 0; i < (int)indexCache.iCaches.size(); ++i){
+            if(indexCache.iCaches[i].database == database && indexCache.iCaches[i].name == tablename){
+                if(indexCache.last == i){
+                    indexCache.last = 3 - indexCache.last - indexCache.first;
+                    indexCache.first = i;
+                }
+                else{
+                    indexCache.first = i;
+                }
+                tableID = i;
+                break;
+            }
+        }
+        if(tableID == -1){
+            tableID = indexCache.last;
+            indexCache.iCaches[tableID].renew();
+            indexCache.iCaches[tableID].init(database, tablename);
+            indexCache.iCaches[tableID].openTable();
+            indexCache.last = 3 - indexCache.first - indexCache.last;
+            indexCache.first = tableID;
+        }
+        table<int>& t = indexCache.iCaches[tableID];
+        auto res = t.eraseTable(cdts);
+        times.end();
+        return res;
     } else { // string
-        table<std::string> t(database, tablename);
-        t.openTable();
-        return t.eraseTable(cdts);
+        int tableID = -1;
+        for(auto i = 0; i < (int)indexCache.sCaches.size(); ++i){
+            if(indexCache.sCaches[i].database == database && indexCache.sCaches[i].name == tablename){
+                if(indexCache.last == i){
+                    indexCache.last = 3 - indexCache.last - indexCache.first;
+                    indexCache.first = i;
+                }
+                else{
+                    indexCache.first = i;
+                }
+                tableID = i;
+                break;
+            }
+        }
+        if(tableID == -1){
+            tableID = indexCache.last;
+            indexCache.sCaches[tableID].renew();
+            indexCache.sCaches[tableID].init(database, tablename);
+            indexCache.sCaches[tableID].openTable();
+            indexCache.last = 3 - indexCache.first - indexCache.last;
+            indexCache.first = tableID;
+        }
+        table<std::string>& t = indexCache.sCaches[tableID];
+        auto res = t.eraseTable(cdts);
+        times.end();
+        return res;
     }
 }

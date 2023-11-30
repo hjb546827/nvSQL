@@ -35,6 +35,7 @@
 
 #pragma once
 
+#include <cstring>
 #include <vector>
 #include <string>
 #include <fstream>
@@ -250,6 +251,36 @@ public:
             file.close();
         }
     }
+    void readRecord(vector<string> &s, vector<int> &pos) {
+        if (!filesystem::exists(this->filename)) {
+            cout << "empty table!" << endl;
+            return;
+        } else {
+            ifstream file(this->filename, ios::in | ios::binary);
+            file.seekg(0, ios::end);
+            int fileSize = file.tellg();
+            file.seekg(0, ios::beg);
+            char fData[fileSize];
+            file.read(fData, sizeof(fData));
+            file.close();
+            for(auto i = 0uz; i < pos.size(); ++i){
+                if(pos[i] == -1){
+                    s[i] = "";
+                    continue;
+                }
+                int offset = pos[i] * (maxRecSize + 1);
+                //file.seekg(offset + 1, ios::beg);
+                uint16_t recSize = 0;
+                memcpy((char*)&recSize, fData + offset + 1, sizeof(recSize));
+                //file.read((char *)&recSize, sizeof(recSize));
+                char _res[recSize];
+                //file.seekg(1, ios::cur);
+                memcpy(_res, fData + offset + 2 + sizeof(recSize), sizeof(_res));
+                //file.read(_res, sizeof(_res));
+                s[i] = string(_res, sizeof(_res));
+            }
+        }
+    }
 
     /**
      * @brief   在磁盘上更新表记录
@@ -276,6 +307,29 @@ public:
             file.close();
         }
     }
+    void updateRecord(vector<int>& poses, vector<string>& s) {
+        if (!filesystem::exists(this->filename)) {
+            cout << "empty table!" << endl;
+            return;
+        }
+        fstream file(this->filename, ios::in | ios::out | ios::binary);
+        for(auto i = 0uz; i < poses.size(); ++i){
+            if(s[i] == ""){
+                continue;
+            }
+            vector<record> recs;
+            makeRecords(this->database, this->table, recs, s[i]);
+            if (recs.size() > 1) {
+                cout << "out of bounds!" << endl;
+                return;
+            }
+
+            int offset = poses[i] * (maxRecSize + 1);
+            file.seekp(offset, ios::beg);
+            recs[0].save(file);
+        }
+        file.close();
+    }
 
     /**
      * @brief   在磁盘上删除表记录
@@ -291,6 +345,22 @@ public:
         memset(blank, 0, maxRecSize);
         _fi.write(blank, maxRecSize);
         _fi.seekp(ios::beg);
+        _fi.close();
+
+        return true;
+    }
+    bool deleteRecord(vector<int>& poses, vector<bool>& erased) {
+        fstream _fi(this->filename, ios::in | ios::out | ios::binary);
+        for(auto i = 0uz; i < poses.size(); ++i){
+            if(poses[i] == -1 | erased[i] == false){
+                continue;
+            }
+            int offset = poses[i] * (maxRecSize + 1);
+            _fi.seekp(offset, ios::beg);
+            char blank[maxRecSize];
+            memset(blank, 0, maxRecSize);
+            _fi.write(blank, maxRecSize);
+        }
         _fi.close();
 
         return true;
@@ -317,6 +387,12 @@ public:
         }
     }
 
+    void renew(){
+        string filename = dataPos + "db/" + "table.dat";
+        string database = "db";
+        string table = "table";
+        keyType = 1;
+    }
 private:
     /**
      * @brief   在内存中实例化一个记录
@@ -430,4 +506,5 @@ private:
             file.close();
         }
     }
+
 };

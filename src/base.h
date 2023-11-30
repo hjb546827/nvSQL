@@ -14,7 +14,9 @@
 #include <filesystem>
 #include <iostream>
 #include <format>
+#include <chrono>
 #include <regex>
+#include <vector>
 #include "tData.h"
 
 /**
@@ -145,3 +147,57 @@ inline void draw_data(std::vector<int> &max_num, std::vector<tColumn> &prop, std
     }
     draw_data(max_num, tmp_prop, data);
 }
+
+template <template <typename> class Cont>
+struct cache{
+    std::vector<Cont<int>> iCaches;
+    std::vector<Cont<std::string>> sCaches;
+    int first;
+    int last;
+
+    cache(){
+        first = 2;
+        last = 0;
+        for(auto i = 0; i < 3; ++i){
+            iCaches.push_back(Cont<int>{});
+            sCaches.push_back(Cont<std::string>{});
+        }
+    }
+};
+
+/**
+ * @brief   计时器
+ */
+class CPUTimer {
+private:
+    using _clock = std::chrono::high_resolution_clock;
+    using _timePoint = std::chrono::time_point<_clock>;
+
+    _timePoint _start, _end;
+    std::chrono::microseconds _duration;
+public:
+    CPUTimer() = default;
+    ~CPUTimer() {}
+
+    /**
+     * @brief   开始计时
+     */
+    void start() {
+        _start = std::chrono::system_clock::now();
+    }
+
+    /**
+     * @brief   停止计时
+     */
+    void end() {
+        _end = std::chrono::system_clock::now();
+        _duration = std::chrono::duration_cast<std::chrono::microseconds>(_end - _start);
+    }
+
+    /**
+     * @brief   打印耗时
+     */
+    void print() {
+        std::cout << "costs " << double(_duration.count()) / 1000.0f << "ms" << std::endl;
+    }
+};

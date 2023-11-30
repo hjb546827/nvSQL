@@ -8,8 +8,10 @@
  */
 
 #include "SQL.h"
+#include <type_traits>
 
-bool DQL::selectRecord(const std::string &database, const std::vector<std::string> &res, const std::string &cmd) {
+bool DQL::selectRecord(const std::string &database, const std::vector<std::string> &res, const std::string &cmd, 
+        cache<table>& indexCache, CPUTimer& times) {
     std::vector<std::string> conditions, table_name, tmp1, tmp2;
     std::vector<tColumn> properties;
     std::vector<std::vector<std::string>> select_res;
@@ -55,20 +57,64 @@ bool DQL::selectRecord(const std::string &database, const std::vector<std::strin
         }
     }
     if (table<>::getKeyType(database, table_name[1]) == 0) { // int
-        table<int> t(database, table_name[1]);
-        t.openTable();
+        int tableID = -1;
+        for(auto i = 0; i < (int)indexCache.iCaches.size(); ++i){
+            if(indexCache.iCaches[i].database == database && indexCache.iCaches[i].name == table_name[1]){
+                if(indexCache.last == i){
+                    indexCache.last = 3 - indexCache.last - indexCache.first;
+                    indexCache.first = i;
+                }
+                else{
+                    indexCache.first = i;
+                }
+                tableID = i;
+                break;
+            }
+        }
+        if(tableID == -1){
+            tableID = indexCache.last;
+            indexCache.iCaches[tableID].renew();
+            indexCache.iCaches[tableID].init(database, table_name[1]);
+            indexCache.iCaches[tableID].openTable();
+            indexCache.last = 3 - indexCache.first - indexCache.last;
+            indexCache.first = tableID;
+        }
+        table<int>& t = indexCache.iCaches[tableID];
         if (!t.readTable(widths, props, datas, cdts)) {
             cout << "Table not exists!" << endl;
             return false;
         }
+        times.end();
         draw_data(widths, props, datas);
     } else { // string
-        table<string> t(database, table_name[1]);
-        t.openTable();
+        int tableID = -1;
+        for(auto i = 0; i < (int)indexCache.sCaches.size(); ++i){
+            if(indexCache.sCaches[i].database == database && indexCache.sCaches[i].name == table_name[1]){
+                if(indexCache.last == i){
+                    indexCache.last = 3 - indexCache.last - indexCache.first;
+                    indexCache.first = i;
+                }
+                else{
+                    indexCache.first = i;
+                }
+                tableID = i;
+                break;
+            }
+        }
+        if(tableID == -1){
+            tableID = indexCache.last;
+            indexCache.sCaches[tableID].renew();
+            indexCache.sCaches[tableID].init(database, table_name[1]);
+            indexCache.sCaches[tableID].openTable();
+            indexCache.last = 3 - indexCache.first - indexCache.last;
+            indexCache.first = tableID;
+        }
+        table<std::string>& t = indexCache.sCaches[tableID];
         if (!t.readTable(widths, props, datas, cdts)) {
             cout << "Table not exists!" << endl;
             return false;
         }
+        times.end();
         draw_data(widths, props, datas);
     }
 

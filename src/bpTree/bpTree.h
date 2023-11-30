@@ -127,7 +127,7 @@ public:
     using key_type = T;
     using node_value_t = node::value_type;
 
-private:
+public:
     vector<leaf_ptr> leafs; // 对叶子节点进行包装，方便直接对其访问
     vector<bool> indexs;    // 某位置的数据是否已被删除（按插入时间顺序排序）
     dataMgr dm;             // 辅助类，对用户磁盘进行操作
@@ -246,6 +246,7 @@ protected:
                 p = _r;
 
                 delete _p;
+                _p = nullptr;
 
                 if (_lr->isLeaf) { // 将新插入的叶子节点加入到leafs中
                     leafs[p_index]->leaf = &(*(r->nodes[0]));
@@ -276,6 +277,7 @@ protected:
                 p = _lr;
                 r->nodes.insert(r->nodes.begin() + k + 1, _rr);
                 delete _p;
+                _p = nullptr;
 
                 if (r->nodes[k]->isLeaf) { // 将新插入的叶子节点加入到leafs中
                     leafs[p_index]->leaf = &(*(r->nodes[k]));
@@ -594,6 +596,7 @@ protected:
                         auto __p = leafs[p_index]->next;
                         leafs[p_index]->next = __p->next;
                         delete __p;
+                        __p = nullptr;
                     }
                     auto hv = r->vals[pos];
                     auto lp = r->nodes[pos];
@@ -612,15 +615,23 @@ protected:
                     r->vals.erase(r->vals.begin() + pos);
                     r->nodes.erase(r->nodes.begin() + rb);
                     delete rp;
+                    rp = nullptr;
                 } else if (lb > -1) { // 向左合并
                     _eq = (r->vals[lb].first == r->nodes[pos]->vals.front().first);
-                    auto p_index = r->nodes[pos]->index;
-                    if (r->nodes[pos]->isLeaf) { // 修正leafs节点对叶子节点的链接
+                    // auto p_index = r->nodes[pos]->index;
+                    // if (r->nodes[pos]->isLeaf) { // 修正leafs节点对叶子节点的链接
+                    //     auto __p = leafs[p_index]->next;
+                    //     leafs[p_index]->leaf = __p->leaf;
+                    //     leafs[p_index]->next = __p->next;
+                    //     delete __p;
+                    //     swap(leafs[p_index], __p);
+                    // }
+                    auto p_index = r->nodes[lb]->index;
+                    if (r->nodes[lb]->isLeaf) { // 修正leafs节点对叶子节点的链接
                         auto __p = leafs[p_index]->next;
-                        leafs[p_index]->leaf = __p->leaf;
                         leafs[p_index]->next = __p->next;
                         delete __p;
-                        swap(leafs[p_index], __p);
+                        __p = nullptr;
                     }
                     auto hv = r->vals[lb];
                     auto lp = r->nodes[lb];
@@ -639,11 +650,15 @@ protected:
                     r->vals.erase(r->vals.begin() + lb);
                     r->nodes.erase(r->nodes.begin() + pos);
                     delete rp;
+                    rp = nullptr;
                 }
                 if (r == root && r->vals.size() == 0) { // 若树只有两层且根节点原本只有1个关键字，处理后根节点会没有值，直接减掉一层
                     auto _r = r;
                     r = r->nodes.front();
+                    head->leaf = r;
+                    head->next = tail;
                     delete _r;
+                    _r = nullptr;
                     return 0;
                 }
                 if ((int)r->vals.size() > min_num)
@@ -720,6 +735,7 @@ protected:
                         r->vals.erase(r->vals.begin() + pos);
                         r->nodes.erase(r->nodes.begin() + rb);
                         delete rp;
+                        rp = nullptr;
                     } else if (lb > -1) { // 向左合并
                         auto hv = r->vals[lb];
                         auto lp = r->nodes[lb];
@@ -734,11 +750,13 @@ protected:
                         r->vals.erase(r->vals.begin() + lb);
                         r->nodes.erase(r->nodes.begin() + pos);
                         delete rp;
+                        rp = nullptr;
                     }
                     if (r == root && r->vals.size() == 0) { // 若树只有两层且根节点原本只有1个关键字，处理后根节点会没有值，直接减掉一层
                         auto _r = r;
                         r = r->nodes.front();
                         delete _r;
+                        _r = nullptr;
                         return 0;
                     }
                     if ((int)r->vals.size() > min_num) {
@@ -934,6 +952,7 @@ protected:
             _clear(i);
         }
         delete r;
+        r = nullptr;
     }
 
 public:
@@ -985,6 +1004,10 @@ public:
         if (filesystem::exists(filename)) {
             ifstream file(filename, ios::binary | ios::in);
             getline(file, _ser);
+            if(_ser[0] == '!'){
+                file.close();
+                return;
+            }
             getline(file, _indexs);
             deSerialize(_ser);
             for (auto i : _indexs) {
@@ -1069,6 +1092,33 @@ public:
         }
         return true;
     }
+    bool erase(vector<key_type>& key, vector<int>& poses, vector<bool>& erased) {
+        for(auto i = 0uz; i < key.size(); ++i){
+            if(poses[i] == -1 || erased[i] == false){
+                continue;
+            }
+            if (root->isLeaf) { // 节点只有根节点
+                int n = root->vals.size();
+                for (auto i = 0; i < n; ++i) {
+                    if (root->vals[i].first == key[i]) { // 直接删除
+                        indexs[root->vals[i].second] = false;
+                        root->vals.erase(root->vals.begin() + i);
+                        root->nodes.pop_back();
+                        continue;
+                    }
+                }
+                continue;
+            }
+            // 递归删除
+            bool _found = false, _first = false;
+            _erase(root, key[i], _found, _first);
+            //traverse();
+            _first = true;
+            _erase(root, key[i], _found, _first);
+        }
+        dm.deleteRecord(poses, erased);
+        return true;
+    }
 
 
     /**
@@ -1097,6 +1147,10 @@ public:
 
         return false;
     }
+    bool update_some(vector<data_type>& data, vector<int>& poses) {
+        dm.updateRecord(poses, data);
+        return true;
+    }
 
     string find(key_type key) {
         string res = "";
@@ -1112,6 +1166,39 @@ public:
         }
         dm.readRecord(res, pos);
         return res;
+    }
+    void find_some(vector<key_type> &key, vector<string> &res) {
+        auto sz = key.size();
+        vector<int> poses(sz, -1);
+        for(auto i = 0uz; i < sz; ++i){
+            auto _n = getNode(key[i]);
+            if (_n == nullptr) {
+                continue;
+            }
+            for (auto j = 0uz; j < (*_n)->vals.size(); ++j) {
+                if (((*_n)->vals)[j].first == key[i]) {
+                    poses[i] = ((*_n)->vals)[j].second;
+                    break;
+                }
+            }
+        }
+        dm.readRecord(res, poses);
+    }
+    void find_some(vector<key_type> &key, vector<string> &res, vector<int>& poses) {
+        auto sz = key.size();
+        for(auto i = 0uz; i < sz; ++i){
+            auto _n = getNode(key[i]);
+            if (_n == nullptr) {
+                continue;
+            }
+            for (auto j = 0uz; j < (*_n)->vals.size(); ++j) {
+                if (((*_n)->vals)[j].first == key[i]) {
+                    poses[i] = ((*_n)->vals)[j].second;
+                    break;
+                }
+            }
+        }
+        dm.readRecord(res, poses);
     }
 
     /**
@@ -1145,8 +1232,11 @@ public:
             q = p;
             p = p->next;
             delete q;
+            q = nullptr;
         }
         _clear(root);
+        indexs.clear();
+        dm.renew();
     }
 
     /**
@@ -1164,10 +1254,16 @@ public:
      * @brief   以序列化的形式对树结构进行存储，同时记录每个节点的数据
      */
     void save() {
-        string _res = serialize();
-
         string filename = dataPos + database + "/" + table + ".ind";
         ofstream file(filename, ios::binary | ios::out);
+        if(root == nullptr){
+            string sss("!");
+            file.write(sss.c_str(), sss.size());
+            file.close();
+            return;
+        }
+        string _res = serialize();
+
         file.write(_res.c_str(), _res.size());
         file.write("\n", 1);
         for (auto i : indexs) {
