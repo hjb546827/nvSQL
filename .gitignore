@@ -57,5 +57,5 @@ backup
 b+Tree
 *.txt
 *.dat
-a
 test.*
+!testcase.txt

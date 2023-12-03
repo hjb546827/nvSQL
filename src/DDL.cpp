@@ -9,7 +9,7 @@
 
 #include "SQL.h"
 
-bool DDL::createDatabase(const std::string &database, CPUTimer& times) {
+bool DDL::createDatabase(const std::string &database, CPUTimer &times) {
     std::string dbPath = "data/" + database;
     if (!std::filesystem::create_directory(dbPath)) {
         std::cout << "Failed to create database!" << std::endl;
@@ -19,7 +19,7 @@ bool DDL::createDatabase(const std::string &database, CPUTimer& times) {
     return true;
 }
 
-bool DDL::dropDatabase(const std::string &database, CPUTimer& times) {
+bool DDL::dropDatabase(const std::string &database, CPUTimer &times) {
     std::string dbPath = "data/" + database;
     try {
         if (!std::filesystem::remove(dbPath)) {
@@ -31,6 +31,7 @@ bool DDL::dropDatabase(const std::string &database, CPUTimer& times) {
         std::string rep;
         while (true) {
             if (std::getline(std::cin, rep)) {
+                times.start();
                 if (rep == "y" || rep == "Y") {
                     if (!std::filesystem::remove_all(dbPath)) {
                         std::cout << "Failed to drop database!" << std::endl;
@@ -49,8 +50,8 @@ bool DDL::dropDatabase(const std::string &database, CPUTimer& times) {
     return true;
 }
 
-bool DDL::createTable(const std::string &database, const std::string &tablename, const string &cmd, 
-        cache<table>& indexCache, CPUTimer& times) {
+bool DDL::createTable(const std::string &database, const std::string &tablename, const std::string &cmd,
+                      cache<table> &indexCache, CPUTimer &times) {
     std::vector<std::string> split_res;
     std::vector<tColumn> data;
     std::string content = cmd.substr(cmd.find("(") + 1, cmd.find(")") - cmd.find("(") - 1);
@@ -82,38 +83,37 @@ bool DDL::createTable(const std::string &database, const std::string &tablename,
     }
 
     if (primaryKey.size() > 1) {
-        std::cout << "syntax error!" << endl;
+        std::cout << "syntax error!" << std::endl;
         return false;
     }
     if (primaryKey.size() == 0 && data.size() > 0) {
         primaryKey.push_back(data.front());
         pkPos = 0;
     }
-    vector<pair<string, char>> tProps;
+    tPropTypeList_t tProps;
     for (auto i : data) {
         tProps.push_back({i.name, 1 - (char)i.type});
     }
     if (primaryKey.front().type == 0) { // int
         int tableID = -1;
-        for(auto i = 0; i < (int)indexCache.iCaches.size(); ++i){
-            if(indexCache.iCaches[i].database == database && indexCache.iCaches[i].name == tablename){
-                if(indexCache.last == i){
+        for (auto i = 0; i < (int)indexCache.iCaches.size(); ++i) {
+            if (indexCache.iCaches[i].database == database && indexCache.iCaches[i].name == tablename) {
+                if (indexCache.last == i) {
                     indexCache.last = 3 - indexCache.last - indexCache.first;
                     indexCache.first = i;
-                }
-                else{
+                } else {
                     indexCache.first = i;
                 }
                 tableID = i;
                 break;
             }
         }
-        if(tableID == -1){
+        if (tableID == -1) {
             tableID = indexCache.last;
             indexCache.last = 3 - indexCache.first - indexCache.last;
             indexCache.first = tableID;
         }
-        table<int>& t = indexCache.iCaches[tableID];
+        table<int> &t = indexCache.iCaches[tableID];
         t.renew();
         t.init(database, tablename);
         auto res = t.createTable(tProps, pkPos);
@@ -121,25 +121,24 @@ bool DDL::createTable(const std::string &database, const std::string &tablename,
         return res;
     } else { // string
         int tableID = -1;
-        for(auto i = 0; i < (int)indexCache.sCaches.size(); ++i){
-            if(indexCache.sCaches[i].database == database && indexCache.sCaches[i].name == tablename){
-                if(indexCache.last == i){
+        for (auto i = 0; i < (int)indexCache.sCaches.size(); ++i) {
+            if (indexCache.sCaches[i].database == database && indexCache.sCaches[i].name == tablename) {
+                if (indexCache.last == i) {
                     indexCache.last = 3 - indexCache.last - indexCache.first;
                     indexCache.first = i;
-                }
-                else{
+                } else {
                     indexCache.first = i;
                 }
                 tableID = i;
                 break;
             }
         }
-        if(tableID == -1){
+        if (tableID == -1) {
             tableID = indexCache.last;
             indexCache.last = 3 - indexCache.first - indexCache.last;
             indexCache.first = tableID;
         }
-        table<std::string>& t = indexCache.sCaches[tableID];
+        table<std::string> &t = indexCache.sCaches[tableID];
         t.renew();
         t.init(database, tablename);
         auto res = t.createTable(tProps, pkPos);
@@ -148,7 +147,7 @@ bool DDL::createTable(const std::string &database, const std::string &tablename,
     }
 }
 
-bool DDL::dropTable(const std::string &database, const std::string &tablename, CPUTimer& times) {
+bool DDL::dropTable(const std::string &database, const std::string &tablename, CPUTimer &times) {
     auto res = table<>::dropTable(database, tablename);
     times.end();
     return res;

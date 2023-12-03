@@ -20,30 +20,31 @@
 #include "type_traits.h"
 #include "dataMgr.h"
 
+namespace bpT {
 using namespace std;
 
 enum printType {KEY, DINDEX, ROOT, INDEX};
 
 /**
- * @brief   b+Tree
- */
+* @brief   b+Tree
+*/
 template <typename T>
 class bpTree {
     /*
-     * eg.
-     *    input: {3,-9}, {5, 8}, {8, 1}, {6, 4}, {0, 10}, {9, 13}, {1, 1}
-     *    build:
-     *      node:              +------- 6 -------+
-     *                        /                   \
-     *               +-- 1 --+-- 5 --+          +- 8 -+
-     *              /        |        \        /       \
-     *           | 0 |   | 1 | 3 |   | 5 |  | 6 |   | 8 | 9 |
-     *           x - x   x - x - x   x - x  x - x   x - x - x
-     *             |       |   |       |      |       |   |
-     *       head :0>>>>>>>>>1>>>>>>>>>5>>>>>>6>>>>>>>>>8>>>>tail
-     *             |       |   |       |      |       |   |
-     *      indexs:4       6   0       1      3       2   5
-     */
+    * eg.
+    *    input: {3,-9}, {5, 8}, {8, 1}, {6, 4}, {0, 10}, {9, 13}, {1, 1}
+    *    build:
+    *      node:              +------- 6 -------+
+    *                        /                   \
+    *               +-- 1 --+-- 5 --+          +- 8 -+
+    *              /        |        \        /       \
+    *           | 0 |   | 1 | 3 |   | 5 |  | 6 |   | 8 | 9 |
+    *           x - x   x - x - x   x - x  x - x   x - x - x
+    *             |       |   |       |      |       |   |
+    *       head :0>>>>>>>>>1>>>>>>>>>5>>>>>>6>>>>>>>>>8>>>>tail
+    *             |       |   |       |      |       |   |
+    *      indexs:4       6   0       1      3       2   5
+    */
 public:
     /**
     * @brief    关键字结构
@@ -102,8 +103,8 @@ private:
     };
 
     /**
-     * @brief   叶子节点封装
-     */
+    * @brief   叶子节点封装
+    */
     struct _leaf {
         _node *leaf;
         _leaf *next;
@@ -153,16 +154,16 @@ public:
         clear();
     }
 
-// ---------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------
 
 private:
     /**
-     * @brief   辅助fission函数
-     * @param   p       节点
-     * @param   _lr     新的左节点的引用
-     * @param   _rr     新的右节点的引用
-     * @param   half    待求中间值位置
-     */
+    * @brief   辅助fission函数
+    * @param   p       节点
+    * @param   _lr     新的左节点的引用
+    * @param   _rr     新的右节点的引用
+    * @param   half    待求中间值位置
+    */
     void _fission(node_ptr &p, node_ptr &_lr, node_ptr &_rr, int &half) {
         half = (m - 1) / 2;
         _lr = new node;
@@ -187,11 +188,11 @@ private:
     }
 
     /**
-     * @brief   前序遍历替代层序遍历，为方便显示层结构未直接使用队列层序遍历
-     * @param   r       节点
-     * @param   v       存储层节点的数组
-     * @param   depth   当前递归深度
-     */
+    * @brief   前序遍历替代层序遍历，为方便显示层结构未直接使用队列层序遍历
+    * @param   r       节点
+    * @param   v       存储层节点的数组
+    * @param   depth   当前递归深度
+    */
     void _levelOrder(node_ptr r, vector<vector<node_ptr>> &v, size_t depth = 0) {
         if (r == nullptr)
             return;
@@ -206,10 +207,10 @@ private:
     }
 
     /**
-     * @brief   辅助erase函数，与右侧最近关键字交换
-     * @param   r_swap      递归节点
-     * @param   v_delete    带有v的原节点
-     */
+    * @brief   辅助erase函数，与右侧最近关键字交换
+    * @param   r_swap      递归节点
+    * @param   v_delete    带有v的原节点
+    */
     void _swap(node_ptr &r_swap, node_value_t &v_delete) {
         // 优先与右最近关键字交换
         if (r_swap->isLeaf) {
@@ -224,9 +225,9 @@ private:
 
 protected:
     /**
-     * @brief   节点分裂
-     * @param   r   节点
-     */
+    * @brief   节点分裂
+    * @param   r   节点
+    */
     void fission(node_ptr &r) {
         if (r == nullptr)
             return;
@@ -293,10 +294,10 @@ protected:
     }
 
     /**
-     * @brief   插入节点
-     * @param   r   节点
-     * @param   v   关键字
-     */
+    * @brief   插入节点
+    * @param   r   节点
+    * @param   v   关键字
+    */
     void _insert(node_ptr &r, node_value_t &v, int &_pos) {
         if (r == nullptr) { // 新创建一个节点
             r = new node(v);
@@ -384,9 +385,9 @@ protected:
         fission(r);
     }
     /**
-     * @brief   对_insert的封装
-     * @param   v
-     */
+    * @brief   对_insert的封装
+    * @param   v
+    */
     void insert(node_value_t v, int &_pos) {
         // 插入并修正
         _insert(root, v, _pos);
@@ -394,14 +395,14 @@ protected:
     }
 
     /**
-     * @brief   删除节点（删除叶子节点或非叶子节点）
-     * @param   r       传入节点
-     * @param   v       删除节点值
-     * @param   _found  是否找到
-     * @return  0       处理完毕
-     * @return  1       待处理
-     * @return  2       上一次查找结果
-     */
+    * @brief   删除节点（删除叶子节点或非叶子节点）
+    * @param   r       传入节点
+    * @param   v       删除节点值
+    * @param   _found  是否找到
+    * @return  0       处理完毕
+    * @return  1       待处理
+    * @return  2       上一次查找结果
+    */
     int _erase(node_ptr &r, key_type v, bool &_found, bool &_first) {
         if (r == nullptr) {
             return 0;
@@ -771,35 +772,46 @@ protected:
     }
 
     /**
-     * @brief   递归查找
-     * @param   r           节点
-     * @param   v           关键字
-     * @return  node_ptr*   含关键字的节点
-     */
-    node_ptr *_find(node_ptr &r, key_type v) const {
+    * @brief   递归查找
+    * @param   r           节点
+    * @param   v           关键字
+    * @param   oper        > : 0; < : 1; = : 2; >= : 3; <= : 4;
+    * @return  node_ptr*   含关键字的节点
+    */
+    node_ptr *_find(node_ptr &r, key_type v, const char oper = 2) {
         if (r == nullptr) {
             return nullptr;
         }
         auto n = r->vals.size();
         if (r->isLeaf) {
-            for (auto i = 0uz; i < n; ++i) {
-                if (v == r->vals[i].first) { // 已找到
-                    return &r;
+            if (oper == 2) { // =
+                for (auto i = 0uz; i < n; ++i) {
+                    if (v == r->vals[i].first) { // 已找到
+                        return &r;
+                    }
                 }
+            } else if (oper == 0) { // >
+                return &r;
+            } else if (oper == 1) { // <
+                return &r;
+            } else if (oper == 3) { // >=
+                return &r;
+            } else if (oper == 4) { // <=
+                return &r;
             }
         }
         for (auto i = 0uz; i <= n; ++i) {
             if (i == 0) { // 进入第一个子节点
                 if (v < r->vals.front().first) {
-                    return _find(r->nodes.front(), v);
+                    return _find(r->nodes.front(), v, oper);
                 }
             } else if (i == n) { // 进入最后一个子节点
                 if (v >= r->vals.back().first) {
-                    return _find(r->nodes.back(), v);
+                    return _find(r->nodes.back(), v, oper);
                 }
             } else { // 进入中间节点
                 if (v >= r->vals[i - 1].first && v < r->vals[i].first) {
-                    return _find(r->nodes[i], v);
+                    return _find(r->nodes[i], v, oper);
                 }
             }
         }
@@ -808,9 +820,9 @@ protected:
     }
 
     /**
-     * @brief   层序遍历并打印
-     * @param   r   节点
-     */
+    * @brief   层序遍历并打印
+    * @param   r   节点
+    */
     void levelOrder(node_ptr r, printType t = KEY) {
         vector<vector<node_ptr>> res;
         _levelOrder(r, res);
@@ -941,9 +953,9 @@ protected:
     }
 
     /**
-     * @brief   递归删除r内的所有节点
-     * @param   r   节点
-     */
+    * @brief   递归删除r内的所有节点
+    * @param   r   节点
+    */
     void _clear(node_ptr r) {
         if (r == nullptr) {
             return;
@@ -957,10 +969,10 @@ protected:
 
 public:
     /**
-     * @brief   创建新树
-     * @param   v   键值对数组
-     * @param   m   树阶数
-     */
+    * @brief   创建新树
+    * @param   v   键值对数组
+    * @param   m   树阶数
+    */
     void clear_all(int m = 3) {
         clear();
         root = nullptr;
@@ -1004,7 +1016,7 @@ public:
         if (filesystem::exists(filename)) {
             ifstream file(filename, ios::binary | ios::in);
             getline(file, _ser);
-            if(_ser[0] == '!'){
+            if (_ser[0] == '!') {
                 file.close();
                 return;
             }
@@ -1040,9 +1052,9 @@ public:
     }
 
     /**
-     * @brief   插入节点
-     * @param   v   键值对
-     */
+    * @brief   插入节点
+    * @param   v   键值对
+    */
     void insert(keyValue v) {
         indexs.push_back(true);
         node_value_t _v(v.key, indexs.size() - 1);
@@ -1058,9 +1070,9 @@ public:
     }
 
     /**
-     * @brief   删除节点
-     * @param   v   键值对
-     */
+    * @brief   删除节点
+    * @param   v   键值对
+    */
     bool erase(key_type v) {
         for (auto iter = head; iter != tail; iter = iter->next) {
             for (auto i : iter->leaf->vals) {
@@ -1092,9 +1104,9 @@ public:
         }
         return true;
     }
-    bool erase(vector<key_type>& key, vector<int>& poses, vector<bool>& erased) {
-        for(auto i = 0uz; i < key.size(); ++i){
-            if(poses[i] == -1 || erased[i] == false){
+    bool erase(vector<key_type> &key, vector<int> &poses, vector<bool> &erased) {
+        for (auto i = 0uz; i < key.size(); ++i) {
+            if (poses[i] == -1 || erased[i] == false) {
                 continue;
             }
             if (root->isLeaf) { // 节点只有根节点
@@ -1122,17 +1134,17 @@ public:
 
 
     /**
-     * @brief   查找键值对所在节点
-     * @param   v           key
-     * @return  node_ptr*   节点
-     */
-    node_ptr *getNode(key_type v) {
-        return _find(root, v);
+    * @brief   查找键值对所在节点
+    * @param   v           key
+    * @return  node_ptr*   节点
+    */
+    node_ptr *getNode(key_type v, const char oper = 2) {
+        return _find(root, v, oper);
     }
 
     /**
     * @brief    更改关键字值
-    * @param    v       // 键值对
+    * @param    key       // 键值对
     * @param    data    // data
     */
     bool update(key_type key, data_type data) {
@@ -1147,11 +1159,16 @@ public:
 
         return false;
     }
-    bool update_some(vector<data_type>& data, vector<int>& poses) {
+    bool update_some(vector<data_type> &data, vector<int> &poses) {
         dm.updateRecord(poses, data);
         return true;
     }
 
+    /**
+    * @brief    查找
+    * @param    key
+    * @return   string
+    */
     string find(key_type key) {
         string res = "";
         auto _n = getNode(key);
@@ -1167,10 +1184,9 @@ public:
         dm.readRecord(res, pos);
         return res;
     }
-    void find_some(vector<key_type> &key, vector<string> &res) {
+    void find_some(vector<key_type> &key, vector<string> &res, vector<int> &poses) {
         auto sz = key.size();
-        vector<int> poses(sz, -1);
-        for(auto i = 0uz; i < sz; ++i){
+        for (auto i = 0uz; i < sz; ++i) {
             auto _n = getNode(key[i]);
             if (_n == nullptr) {
                 continue;
@@ -1184,26 +1200,112 @@ public:
         }
         dm.readRecord(res, poses);
     }
-    void find_some(vector<key_type> &key, vector<string> &res, vector<int>& poses) {
-        auto sz = key.size();
-        for(auto i = 0uz; i < sz; ++i){
-            auto _n = getNode(key[i]);
-            if (_n == nullptr) {
-                continue;
+    void find_some(vector<key_type> &key, vector<string> &res) {
+        vector<int> poses(key.size(), -1);
+        find_some(key, res, poses);
+    }
+    void find_matched(key_type key, vector<key_type> &keys, vector<string> &res, vector<int> &poses, const char oper) {
+        auto _n = getNode(key, oper);
+        if (_n == nullptr) {
+            return;
+        }
+        // > : 0; < : 1; = : 2; >= : 3; <= 4;
+        leaf_ptr p;
+        switch (oper) {
+        case 0: // >
+            p = leafs[(*_n)->index];
+            for (auto &i : (*_n)->vals) {
+                if (i.first > key) {
+                    keys.push_back(i.first);
+                    poses.push_back(i.second);
+                }
             }
-            for (auto j = 0uz; j < (*_n)->vals.size(); ++j) {
-                if (((*_n)->vals)[j].first == key[i]) {
-                    poses[i] = ((*_n)->vals)[j].second;
+            p = p->next;
+            while (p != tail) {
+                for (auto &i : p->leaf->vals) {
+                    keys.push_back(i.first);
+                    poses.push_back(i.second);
+                }
+                p = p->next;
+            }
+            break;
+        case 1: // <
+            p = head;
+            while (p != tail) {
+                bool _br = false;
+                for (auto &i : p->leaf->vals) {
+                    if (i.first >= key) {
+                        _br = true;
+                        break;
+                    }
+                    keys.push_back(i.first);
+                    poses.push_back(i.second);
+                }
+                if (_br == true)
+                    break;
+                p = p->next;
+            }
+            break;
+        case 2: // =
+            for (auto &i : (*_n)->vals) {
+                if (i.first == key) {
+                    keys.push_back(i.first);
+                    poses.push_back(i.second);
                     break;
                 }
             }
+            break;
+        case 3: // >=
+            p = leafs[(*_n)->index];
+            for (auto &i : (*_n)->vals) {
+                if (i.first >= key) {
+                    keys.push_back(i.first);
+                    poses.push_back(i.second);
+                }
+            }
+            p = p->next;
+            while (p != tail) {
+                for (auto &i : p->leaf->vals) {
+                    keys.push_back(i.first);
+                    poses.push_back(i.second);
+                }
+                p = p->next;
+            }
+            break;
+        case 4: // <=
+            p = head;
+            while (p != tail) {
+                bool _br = false;
+                for (auto &i : p->leaf->vals) {
+                    if (i.first > key) {
+                        _br = true;
+                        break;
+                    }
+                    keys.push_back(i.first);
+                    poses.push_back(i.second);
+                }
+                if (_br == true)
+                    break;
+                p = p->next;
+            }
+            break;
         }
+        res.resize(keys.size(), "");
         dm.readRecord(res, poses);
+    }
+    void find_matched(key_type key, vector<string> &res, vector<int> &poses, const char oper) {
+        vector<key_type> keys;
+        find_matched(key, keys, res, poses, oper);
+    }
+    void find_matched(key_type key, vector<string> &res, const char oper) {
+        vector<key_type> keys;
+        vector<int> poses;
+        find_matched(key, keys, res, poses, oper);
     }
 
     /**
-     * @brief   层序遍历并打印每层结构
-     */
+    * @brief   层序遍历并打印每层结构
+    */
     void traverse(printType t = KEY) {
         cout << "-----------------------------" << endl;
         levelOrder(root, t);
@@ -1222,9 +1324,9 @@ public:
     }
 
     /**
-     * @brief   清空bTree
-     * @param   r
-     */
+    * @brief   清空bTree
+    * @param   r
+    */
     void clear() {
         leafs.clear();
         auto p = head, q = p;
@@ -1240,9 +1342,9 @@ public:
     }
 
     /**
-     * @brief   b+数的序列化
-     * @return  string 以字符串形式表示及存储
-     */
+    * @brief   b+树的序列化
+    * @return  string 以字符串形式表示及存储
+    */
     string serialize() {
         string output = "";
         levelOrder(root, output);
@@ -1251,12 +1353,12 @@ public:
     }
 
     /**
-     * @brief   以序列化的形式对树结构进行存储，同时记录每个节点的数据
-     */
+    * @brief   以序列化的形式对树结构进行存储，同时记录每个节点的数据
+    */
     void save() {
         string filename = dataPos + database + "/" + table + ".ind";
         ofstream file(filename, ios::binary | ios::out);
-        if(root == nullptr){
+        if (root == nullptr) {
             string sss("!");
             file.write(sss.c_str(), sss.size());
             file.close();
@@ -1284,9 +1386,9 @@ public:
     }
 
     /**
-     * @brief   反序列化
-     * @param   s   b+树序列化后的序列
-     */
+    * @brief   反序列化
+    * @param   s   b+树序列化后的序列
+    */
     void deSerialize(string &s) {
         vector<string> _res;
         str_split(s, _res, ' ');
@@ -1295,9 +1397,10 @@ public:
     }
 
     /**
-     * @brief   无条件初始化该树在磁盘上的存储数据
-     */
+    * @brief   无条件初始化该树在磁盘上的存储数据
+    */
     void recordInit() {
         dm.profInit();
     }
 };
+}

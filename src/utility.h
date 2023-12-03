@@ -1,5 +1,5 @@
 /**
- * @file        base.h
+ * @file        utility.h
  * @brief
  * @author      hjb
  * @version     1.0
@@ -10,14 +10,31 @@
 #pragma once
 
 #include <algorithm>
+#include <cstdint>
 #include <cstring>
 #include <filesystem>
 #include <iostream>
 #include <format>
 #include <chrono>
 #include <regex>
+#include <string>
 #include <vector>
 #include "tData.h"
+
+// 单个表查询属性名与查询值
+using tCdtName_t = std::pair<std::string, std::string>;
+// 多个表查询属性名与查询值
+using tCdtNameList_t = std::vector<tCdtName_t>;
+// 单个表查询属性在属性列表中位置与查询值
+using tCdtPos_t = std::pair<int, std::string>;
+// 多个表查询属性在属性列表中位置与查询值
+using tCdtPosList_t = std::vector<tCdtPos_t>;
+// 单个表属性名称与类型
+using tPropType_t = std::pair<std::string, char>;
+// 多个表属性名称与类型
+using tPropTypeList_t = std::vector<tPropType_t>;
+// 用于打印的数据结构
+using printData_t = std::vector<std::vector<std::string>>;
 
 /**
  * @brief   字符串预处理
@@ -80,6 +97,48 @@ inline void str_split(std::string str, std::vector<std::string> &v, const char s
     str_split(str, v, std::string(1, split));
 }
 
+/**
+ * @brief   判断where子句中的大小比较运算符
+ * @param   s   where子句中某一句的原字符串
+ * @param   s1  原字符串被切割后的第一部分
+ * @return  uint8_t
+ */
+inline uint8_t arithOperMatch(std::string &s, std::string &s1) {
+    // > : 0; < : 1; = : 2; >= : 3; <= : 4;
+    size_t fsz = s1.size();
+    char oper = s[fsz];
+    if (oper == ' ') {
+        fsz++;
+        oper = s[fsz];
+    }
+    switch (oper) {
+    case '>':
+        if (s[fsz + 1] == '=') {
+            return 3;
+        } else {
+            return 0;
+        }
+        break;
+    case '<':
+        if (s[fsz + 1] == '=') {
+            return 4;
+        } else {
+            return 1;
+        }
+        break;
+    case '=':
+        return 2;
+        break;
+    }
+    return 5;
+}
+
+/**
+ * @brief   检测数据库是否存在
+ * @param   database
+ * @return  true
+ * @return  false
+ */
 inline bool searchDatabase(const std::string database) {
     if (!std::filesystem::exists("data/" + database)) {
         std::cout << "Database not exists!" << std::endl;
@@ -88,6 +147,13 @@ inline bool searchDatabase(const std::string database) {
         return true;
 }
 
+/**
+ * @brief   检测表是否存在
+ * @param   database
+ * @param   tablename
+ * @return  true
+ * @return  false
+ */
 inline bool searchTable(const std::string database, const std::string tablename) {
     if (!std::filesystem::exists("data/" + database + "/" + tablename + ".prof")) {
         std::cout << "Table not exists!" << std::endl;
@@ -126,6 +192,9 @@ inline void draw_data(std::vector<int> &max_num, std::vector<std::string> &prop,
     }
     std::cout << "|" << std::endl;
     for (auto i = 0uz; i < data.size(); ++i) {
+        if (data[i].size() == 0uz) {
+            continue;
+        }
         draw_line(max_num, prop.size());
         for (auto j = 0uz; j < prop.size(); ++j) {
             std::cout << "| " << std::setw(max_num[j]) << std::setiosflags(std::ios::left) << data[i][j] << " ";
@@ -149,18 +218,18 @@ inline void draw_data(std::vector<int> &max_num, std::vector<tColumn> &prop, std
 }
 
 template <template <typename> class Cont>
-struct cache{
+struct cache {
     std::vector<Cont<int>> iCaches;
     std::vector<Cont<std::string>> sCaches;
     int first;
     int last;
 
-    cache(){
+    cache() {
         first = 2;
         last = 0;
-        for(auto i = 0; i < 3; ++i){
-            iCaches.push_back(Cont<int>{});
-            sCaches.push_back(Cont<std::string>{});
+        for (auto i = 0; i < 3; ++i) {
+            iCaches.push_back(Cont<int> {});
+            sCaches.push_back(Cont<std::string> {});
         }
     }
 };
@@ -199,5 +268,13 @@ public:
      */
     void print() {
         std::cout << "costs " << double(_duration.count()) / 1000.0f << "ms" << std::endl;
+    }
+
+    /**
+     * @brief	获取时间间隔
+     * @return	std::string 
+     */
+    std::string get_duration(){
+        return std::format("{}ms", double(_duration.count()) / 1000.0f);
     }
 };
