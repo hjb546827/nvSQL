@@ -128,3 +128,7 @@ Drop database successfully in 14.454ms!
 db> exit
 Bye
 ```
+
+## 测试用例
+
+见testcase.txt
