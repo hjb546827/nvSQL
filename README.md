@@ -24,6 +24,7 @@ bin/nvSQL
 
 ## 项目结构
 
+```
 nvSQL
   |---- data // 数据文件
   |---- bin // 可执行文件
@@ -42,6 +43,7 @@ nvSQL
   |       |---- table.h // 表对象
   |       +---- utility.h // 全局变量、全局函数、计时器等
   +---- makefile // makefile文件
+```
 
 ## 系统功能
 
