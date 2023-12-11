@@ -24,7 +24,7 @@ bin/nvSQL
 
 ## 项目结构
 
-```
+```html
 nvSQL
   |---- data // 数据文件
   |---- bin // 可执行文件
@@ -50,13 +50,16 @@ nvSQL
 ### 具体功能
 
 - 存储功能
+
   - 目录结构
-    data // 数据文件
-       |---- person // 数据库名
-       |          |-- person.dat      // 表的数据文件
-       |          |-- person.ind      // 同名表的索引文件
-       |          +-- person.prof    // 同名表的配置文件
-       +---- other
+  ```html
+  data // 数据文件
+  |---- person // 数据库名
+  |          |-- person.dat      // 表的数据文件
+  |          |-- person.ind      // 同名表的索引文件
+  |          +-- person.prof    // 同名表的配置文件
+  +---- other
+  ```
 - DDL
   - create database
     功能：创建数据库
@@ -94,6 +97,7 @@ nvSQL
     功能：根据条件（如果有）查询表，显示查询结果。
     语法：select <column> from <table> [ where <cond> ]；
 - 索引
+  
   - 使用b+树建立索引，默认建立在表的主键上
 
 ### 界面
